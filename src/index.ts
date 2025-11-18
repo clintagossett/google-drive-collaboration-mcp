@@ -545,6 +545,64 @@ const CreateGoogleSlidesShapeSchema = z.object({
   }).optional()
 });
 
+// Phase 1 Google Docs API Tools
+const DocsDeleteContentRangeSchema = z.object({
+  documentId: z.string().min(1, "Document ID is required"),
+  startIndex: z.number().min(1, "Start index must be at least 1"),
+  endIndex: z.number().min(1, "End index must be at least 1")
+});
+
+const DocsReplaceAllTextSchema = z.object({
+  documentId: z.string().min(1, "Document ID is required"),
+  containsText: z.string().min(1, "Search text is required"),
+  replaceText: z.string(),
+  matchCase: z.boolean().optional()
+});
+
+const DocsCreateParagraphBulletsSchema = z.object({
+  documentId: z.string().min(1, "Document ID is required"),
+  startIndex: z.number().min(1, "Start index must be at least 1"),
+  endIndex: z.number().min(1, "End index must be at least 1"),
+  bulletPreset: z.enum([
+    'BULLET_DISC_CIRCLE_SQUARE',
+    'BULLET_DIAMONDX_ARROW3D_SQUARE',
+    'BULLET_CHECKBOX',
+    'BULLET_ARROW_DIAMOND_DISC',
+    'BULLET_STAR_CIRCLE_SQUARE',
+    'BULLET_ARROW3D_CIRCLE_SQUARE',
+    'BULLET_LEFTTRIANGLE_DIAMOND_DISC',
+    'BULLET_DIAMONDX_HOLLOWDIAMOND_SQUARE',
+    'BULLET_DIAMOND_CIRCLE_SQUARE',
+    'NUMBERED_DECIMAL_ALPHA_ROMAN',
+    'NUMBERED_DECIMAL_ALPHA_ROMAN_PARENS',
+    'NUMBERED_DECIMAL_NESTED',
+    'NUMBERED_UPPERALPHA_ALPHA_ROMAN',
+    'NUMBERED_UPPERROMAN_UPPERALPHA_DECIMAL',
+    'NUMBERED_ZERODECIMAL_ALPHA_ROMAN'
+  ]).optional()
+});
+
+const DocsDeleteParagraphBulletsSchema = z.object({
+  documentId: z.string().min(1, "Document ID is required"),
+  startIndex: z.number().min(1, "Start index must be at least 1"),
+  endIndex: z.number().min(1, "End index must be at least 1")
+});
+
+const DocsInsertPageBreakSchema = z.object({
+  documentId: z.string().min(1, "Document ID is required"),
+  index: z.number().min(1, "Index must be at least 1")
+});
+
+const DocsUpdateDocumentStyleSchema = z.object({
+  documentId: z.string().min(1, "Document ID is required"),
+  marginTop: z.number().optional(),
+  marginBottom: z.number().optional(),
+  marginLeft: z.number().optional(),
+  marginRight: z.number().optional(),
+  pageWidth: z.number().optional(),
+  pageHeight: z.number().optional()
+});
+
 // -----------------------------------------------------------------------------
 // SERVER SETUP
 // -----------------------------------------------------------------------------
@@ -1179,6 +1237,89 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {
             documentId: { type: "string", description: "Document ID" }
+          },
+          required: ["documentId"]
+        }
+      },
+      {
+        name: "docs_deleteContentRange",
+        description: "Delete content from a specified range in a Google Doc. Maps to DeleteContentRangeRequest in Google Docs API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            documentId: { type: "string", description: "The ID of the document" },
+            startIndex: { type: "number", description: "The zero-based start index of the range to delete (inclusive, min 1)" },
+            endIndex: { type: "number", description: "The zero-based end index of the range to delete (exclusive, min 1)" }
+          },
+          required: ["documentId", "startIndex", "endIndex"]
+        }
+      },
+      {
+        name: "docs_replaceAllText",
+        description: "Replace all instances of text matching criteria with replacement text in a Google Doc. Maps to ReplaceAllTextRequest in Google Docs API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            documentId: { type: "string", description: "The ID of the document" },
+            containsText: { type: "string", description: "The text to search for" },
+            replaceText: { type: "string", description: "The text to replace with (cannot contain newlines)" },
+            matchCase: { type: "boolean", description: "Whether to match case (default: false)", optional: true }
+          },
+          required: ["documentId", "containsText", "replaceText"]
+        }
+      },
+      {
+        name: "docs_createParagraphBullets",
+        description: "Create bullets for paragraphs in a range. Maps to CreateParagraphBulletsRequest in Google Docs API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            documentId: { type: "string", description: "The ID of the document" },
+            startIndex: { type: "number", description: "Start index of the range" },
+            endIndex: { type: "number", description: "End index of the range" },
+            bulletPreset: { type: "string", description: "Bullet style preset (optional)", optional: true }
+          },
+          required: ["documentId", "startIndex", "endIndex"]
+        }
+      },
+      {
+        name: "docs_deleteParagraphBullets",
+        description: "Remove bullets from paragraphs in a range. Maps to DeleteParagraphBulletsRequest in Google Docs API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            documentId: { type: "string", description: "The ID of the document" },
+            startIndex: { type: "number", description: "Start index of the range" },
+            endIndex: { type: "number", description: "End index of the range" }
+          },
+          required: ["documentId", "startIndex", "endIndex"]
+        }
+      },
+      {
+        name: "docs_insertPageBreak",
+        description: "Insert a page break at a specified location. Maps to InsertPageBreakRequest in Google Docs API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            documentId: { type: "string", description: "The ID of the document" },
+            index: { type: "number", description: "The location to insert the page break" }
+          },
+          required: ["documentId", "index"]
+        }
+      },
+      {
+        name: "docs_updateDocumentStyle",
+        description: "Update document-wide styling (margins, page size). Maps to UpdateDocumentStyleRequest in Google Docs API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            documentId: { type: "string", description: "The ID of the document" },
+            marginTop: { type: "number", description: "Top margin in points", optional: true },
+            marginBottom: { type: "number", description: "Bottom margin in points", optional: true },
+            marginLeft: { type: "number", description: "Left margin in points", optional: true },
+            marginRight: { type: "number", description: "Right margin in points", optional: true },
+            pageWidth: { type: "number", description: "Page width in points", optional: true },
+            pageHeight: { type: "number", description: "Page height in points", optional: true }
           },
           required: ["documentId"]
         }
@@ -2789,6 +2930,229 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [{
             type: "text",
             text: formattedContent + `\nTotal length: ${content.length} characters`
+          }],
+          isError: false
+        };
+      }
+
+      case "docs_deleteContentRange": {
+        const validation = DocsDeleteContentRangeSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const docs = google.docs({ version: 'v1', auth: authClient });
+        await docs.documents.batchUpdate({
+          documentId: args.documentId,
+          requestBody: {
+            requests: [{
+              deleteContentRange: {
+                range: {
+                  startIndex: args.startIndex,
+                  endIndex: args.endIndex
+                }
+              }
+            }]
+          }
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: `Successfully deleted content from index ${args.startIndex} to ${args.endIndex} in document ${args.documentId}`
+          }],
+          isError: false
+        };
+      }
+
+      case "docs_replaceAllText": {
+        const validation = DocsReplaceAllTextSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const docs = google.docs({ version: 'v1', auth: authClient });
+        const response = await docs.documents.batchUpdate({
+          documentId: args.documentId,
+          requestBody: {
+            requests: [{
+              replaceAllText: {
+                containsText: {
+                  text: args.containsText,
+                  matchCase: args.matchCase ?? false
+                },
+                replaceText: args.replaceText
+              }
+            }]
+          }
+        });
+
+        const occurrencesReplaced = response.data.replies?.[0]?.replaceAllText?.occurrencesChanged || 0;
+
+        return {
+          content: [{
+            type: "text",
+            text: `Successfully replaced ${occurrencesReplaced} occurrence(s) of "${args.containsText}" with "${args.replaceText}" in document ${args.documentId}`
+          }],
+          isError: false
+        };
+      }
+
+      case "docs_createParagraphBullets": {
+        const validation = DocsCreateParagraphBulletsSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const docs = google.docs({ version: 'v1', auth: authClient });
+        const requestBody: any = {
+          requests: [{
+            createParagraphBullets: {
+              range: {
+                startIndex: args.startIndex,
+                endIndex: args.endIndex
+              }
+            }
+          }]
+        };
+
+        if (args.bulletPreset) {
+          requestBody.requests[0].createParagraphBullets.bulletPreset = args.bulletPreset;
+        }
+
+        await docs.documents.batchUpdate({
+          documentId: args.documentId,
+          requestBody
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: `Successfully created bullets for paragraphs from index ${args.startIndex} to ${args.endIndex}${args.bulletPreset ? ` with preset: ${args.bulletPreset}` : ''}`
+          }],
+          isError: false
+        };
+      }
+
+      case "docs_deleteParagraphBullets": {
+        const validation = DocsDeleteParagraphBulletsSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const docs = google.docs({ version: 'v1', auth: authClient });
+        await docs.documents.batchUpdate({
+          documentId: args.documentId,
+          requestBody: {
+            requests: [{
+              deleteParagraphBullets: {
+                range: {
+                  startIndex: args.startIndex,
+                  endIndex: args.endIndex
+                }
+              }
+            }]
+          }
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: `Successfully removed bullets from paragraphs from index ${args.startIndex} to ${args.endIndex}`
+          }],
+          isError: false
+        };
+      }
+
+      case "docs_insertPageBreak": {
+        const validation = DocsInsertPageBreakSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const docs = google.docs({ version: 'v1', auth: authClient });
+        await docs.documents.batchUpdate({
+          documentId: args.documentId,
+          requestBody: {
+            requests: [{
+              insertPageBreak: {
+                location: {
+                  index: args.index
+                }
+              }
+            }]
+          }
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: `Successfully inserted page break at index ${args.index}`
+          }],
+          isError: false
+        };
+      }
+
+      case "docs_updateDocumentStyle": {
+        const validation = DocsUpdateDocumentStyleSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const docs = google.docs({ version: 'v1', auth: authClient });
+        const documentStyle: any = {};
+        const fields: string[] = [];
+
+        if (args.marginTop !== undefined) {
+          documentStyle.marginTop = { magnitude: args.marginTop, unit: 'PT' };
+          fields.push('marginTop');
+        }
+        if (args.marginBottom !== undefined) {
+          documentStyle.marginBottom = { magnitude: args.marginBottom, unit: 'PT' };
+          fields.push('marginBottom');
+        }
+        if (args.marginLeft !== undefined) {
+          documentStyle.marginLeft = { magnitude: args.marginLeft, unit: 'PT' };
+          fields.push('marginLeft');
+        }
+        if (args.marginRight !== undefined) {
+          documentStyle.marginRight = { magnitude: args.marginRight, unit: 'PT' };
+          fields.push('marginRight');
+        }
+        if (args.pageWidth !== undefined || args.pageHeight !== undefined) {
+          documentStyle.pageSize = {};
+          if (args.pageWidth !== undefined) {
+            documentStyle.pageSize.width = { magnitude: args.pageWidth, unit: 'PT' };
+            fields.push('pageSize.width');
+          }
+          if (args.pageHeight !== undefined) {
+            documentStyle.pageSize.height = { magnitude: args.pageHeight, unit: 'PT' };
+            fields.push('pageSize.height');
+          }
+        }
+
+        await docs.documents.batchUpdate({
+          documentId: args.documentId,
+          requestBody: {
+            requests: [{
+              updateDocumentStyle: {
+                documentStyle,
+                fields: fields.join(',')
+              }
+            }]
+          }
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: `Successfully updated document style: ${fields.join(', ')}`
           }],
           isError: false
         };

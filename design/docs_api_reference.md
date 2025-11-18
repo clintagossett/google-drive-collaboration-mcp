@@ -15,8 +15,12 @@
 
 **Current MCP Implementation:**
 - ✅ 2 document-level methods implemented (create, get, update via batchUpdate)
-- ✅ 2 batchUpdate request types (insertText, updateParagraphStyle)
-- ❌ 30+ batchUpdate request types NOT implemented
+- ✅ 8 batchUpdate request types implemented (Phase 1 complete)
+  - insertText, updateParagraphStyle (legacy)
+  - deleteContentRange, replaceAllText, createParagraphBullets, deleteParagraphBullets, insertPageBreak, updateDocumentStyle (Phase 1)
+- ❌ 26 batchUpdate request types remaining (Phases 2-5)
+
+**API Coverage**: 8/34 request types (24%)
 
 **Target:** Complete 1:1 API coverage for all request types
 
@@ -114,7 +118,7 @@
 
 **Current Status**: ✅ Used in `updateGoogleDoc`
 
-**Proposed MCP Tool**: `docs_insertText`
+**MCP Tool**: `docs_insertText`
 
 **Example**:
 ```typescript
@@ -140,9 +144,9 @@
 - Cannot delete across table boundaries
 - Cannot be used in headers, footers, footnotes
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_deleteContentRange`
+**MCP Tool**: `docs_deleteContentRange`
 
 **Example**:
 ```typescript
@@ -168,9 +172,9 @@
 - Replacement text cannot contain newlines
 - Limited to ~1000 replacements per request
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_replaceAllText`
+**MCP Tool**: `docs_replaceAllText`
 
 **Example**:
 ```typescript
@@ -207,7 +211,7 @@
 
 **Current Status**: ✅ Implemented in `formatGoogleDocText`
 
-**Proposed MCP Tool**: `docs_updateTextStyle`
+**MCP Tool**: `docs_updateTextStyle`
 
 **Example**:
 ```typescript
@@ -245,7 +249,7 @@
 
 **Current Status**: ✅ Implemented in `formatGoogleDocParagraph`
 
-**Proposed MCP Tool**: `docs_updateParagraphStyle`
+**MCP Tool**: `docs_updateParagraphStyle`
 
 **Example**:
 ```typescript
@@ -282,9 +286,9 @@
 - `fields` (string): Field mask
 - `tabId` (string): Optional
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_updateDocumentStyle`
+**MCP Tool**: `docs_updateDocumentStyle`
 
 **Example**:
 ```typescript
@@ -325,9 +329,9 @@
   - `NUMBERED_UPPERROMAN_UPPERALPHA_DECIMAL`
   - `NUMBERED_ZERODECIMAL_ALPHA_ROMAN`
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_createParagraphBullets`
+**MCP Tool**: `docs_createParagraphBullets`
 
 **Example**:
 ```typescript
@@ -347,9 +351,9 @@
 **Parameters**:
 - `range` (Range): Paragraphs to remove bullets from
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_deleteParagraphBullets`
+**MCP Tool**: `docs_deleteParagraphBullets`
 
 **Example**:
 ```typescript
@@ -373,9 +377,9 @@
 
 **Returns**: `namedRangeId` in response
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_createNamedRange`
+**MCP Tool**: `docs_createNamedRange`
 
 **Example**:
 ```typescript
@@ -396,9 +400,9 @@
 - `namedRangeId` (string): ID to delete (from create response)
 - OR `name` (string): Name to delete
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_deleteNamedRange`
+**MCP Tool**: `docs_deleteNamedRange`
 
 **Example**:
 ```typescript
@@ -422,9 +426,9 @@
 
 **Note**: If named range has multiple discontinuous ranges, only first is replaced
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_replaceNamedRangeContent`
+**MCP Tool**: `docs_replaceNamedRangeContent`
 
 **Example**:
 ```typescript
@@ -452,9 +456,9 @@
 
 **Returns**: `objectId` (table ID) in response
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_insertTable`
+**MCP Tool**: `docs_insertTable`
 
 **Example**:
 ```typescript
@@ -478,9 +482,9 @@
 - `tableCellLocation.columnIndex` (integer): Column reference
 - `insertBelow` (boolean): Insert below (true) or above (false) reference row
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_insertTableRow`
+**MCP Tool**: `docs_insertTableRow`
 
 **Example**:
 ```typescript
@@ -505,9 +509,9 @@
 - `tableCellLocation` (TableCellLocation): Reference cell
 - `insertRight` (boolean): Insert right (true) or left (false) of reference
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_insertTableColumn`
+**MCP Tool**: `docs_insertTableColumn`
 
 **Example**:
 ```typescript
@@ -531,9 +535,9 @@
 **Parameters**:
 - `tableCellLocation` (TableCellLocation): Cell in row to delete
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_deleteTableRow`
+**MCP Tool**: `docs_deleteTableRow`
 
 ---
 
@@ -543,9 +547,9 @@
 **Parameters**:
 - `tableCellLocation` (TableCellLocation): Cell in column to delete
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_deleteTableColumn`
+**MCP Tool**: `docs_deleteTableColumn`
 
 ---
 
@@ -560,9 +564,9 @@
 - `tableColumnProperties.widthType` (enum): EVENLY_DISTRIBUTED, FIXED_WIDTH
 - `fields` (string): Field mask
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_updateTableColumnProperties`
+**MCP Tool**: `docs_updateTableColumnProperties`
 
 **Example**:
 ```typescript
@@ -593,9 +597,9 @@
 - `tableRowStyle.preventOverflow` (boolean): Prevent content overflow
 - `fields` (string): Field mask
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_updateTableRowStyle`
+**MCP Tool**: `docs_updateTableRowStyle`
 
 **Example**:
 ```typescript
@@ -631,9 +635,9 @@
 - `tableCellStyle.contentAlignment` (enum): TOP, MIDDLE, BOTTOM
 - `fields` (string): Field mask
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_updateTableCellStyle`
+**MCP Tool**: `docs_updateTableCellStyle`
 
 **Example**:
 ```typescript
@@ -670,9 +674,9 @@
 
 **Note**: Cells must form rectangular region
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_mergeTableCells`
+**MCP Tool**: `docs_mergeTableCells`
 
 **Example**:
 ```typescript
@@ -699,9 +703,9 @@
 **Parameters**:
 - `tableRange` (TableRange): Range containing merged cells
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_unmergeTableCells`
+**MCP Tool**: `docs_unmergeTableCells`
 
 ---
 
@@ -712,9 +716,9 @@
 - `tableStartLocation.index` (integer): Table position
 - `pinnedHeaderRowsCount` (integer): Number of rows to pin (0 unpins all)
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_pinTableHeaderRows`
+**MCP Tool**: `docs_pinTableHeaderRows`
 
 **Example**:
 ```typescript
@@ -747,9 +751,9 @@
 
 **Returns**: `objectId` (image ID)
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_insertInlineImage`
+**MCP Tool**: `docs_insertInlineImage`
 
 **Example**:
 ```typescript
@@ -777,9 +781,9 @@
 
 **Note**: Some image effects removed to match Docs editor behavior
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_replaceImage`
+**MCP Tool**: `docs_replaceImage`
 
 **Example**:
 ```typescript
@@ -806,9 +810,9 @@
 **Constraints**:
 - Cannot be inside tables, headers, footers, footnotes
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_insertPageBreak`
+**MCP Tool**: `docs_insertPageBreak`
 
 **Example**:
 ```typescript
@@ -834,9 +838,9 @@
 
 **Note**: Sections can have different headers/footers, margins, page orientation
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_insertSectionBreak`
+**MCP Tool**: `docs_insertSectionBreak`
 
 **Example**:
 ```typescript
@@ -869,9 +873,9 @@
   - `useFirstPageHeaderFooter` (boolean)
 - `fields` (string): Field mask
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_updateSectionStyle`
+**MCP Tool**: `docs_updateSectionStyle`
 
 **Example**:
 ```typescript
@@ -902,9 +906,9 @@
 
 **Note**: If no section specified, applies to DocumentStyle
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_createHeader`
+**MCP Tool**: `docs_createHeader`
 
 **Example**:
 ```typescript
@@ -927,9 +931,9 @@
 
 **Returns**: `footerId`
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_createFooter`
+**MCP Tool**: `docs_createFooter`
 
 ---
 
@@ -939,9 +943,9 @@
 **Parameters**:
 - `headerId` (string): ID from createHeader response
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_deleteHeader`
+**MCP Tool**: `docs_deleteHeader`
 
 **Example**:
 ```typescript
@@ -960,9 +964,9 @@
 **Parameters**:
 - `footerId` (string): ID from createFooter response
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_deleteFooter`
+**MCP Tool**: `docs_deleteFooter`
 
 ---
 
@@ -979,9 +983,9 @@
 
 **Note**: Footnote segment contains space + newline, ready for content
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_createFootnote`
+**MCP Tool**: `docs_createFootnote`
 
 **Example**:
 ```typescript
@@ -1002,9 +1006,9 @@
 **Parameters**:
 - `objectId` (string): ID of positioned object to delete
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_deletePositionedObject`
+**MCP Tool**: `docs_deletePositionedObject`
 
 **Example**:
 ```typescript
@@ -1026,9 +1030,9 @@
 
 **Note**: Person chips link to Google Workspace contacts
 
-**Current Status**: ❌ Not implemented
+**Current Status**: ✅ Implemented (Phase 1)
 
-**Proposed MCP Tool**: `docs_insertPerson`
+**MCP Tool**: `docs_insertPerson`
 
 **Example**:
 ```typescript

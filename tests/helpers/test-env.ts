@@ -37,8 +37,10 @@ export const TEST_CONFIG = {
   enableIntegrationTests: process.env.ENABLE_INTEGRATION_TESTS === 'true',
   enablePerformanceTests: process.env.ENABLE_PERFORMANCE_TESTS === 'true',
 
-  // Server path
+  // Server path and configuration
   serverPath: path.join(__dirname, '../../dist/index.js'),
+  serverArgs: [] as string[],
+  env: process.env,
 };
 
 /**

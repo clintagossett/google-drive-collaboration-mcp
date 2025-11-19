@@ -340,6 +340,105 @@ const DriveListFilesSchema = z.object({
   corpora: z.string().optional()
 });
 
+// Phase 2: File Utilities - 1:1 Mappings
+// Maps to files.copy in Google Drive API v3
+const DriveCopyFileSchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  name: z.string().optional(),
+  parents: z.array(z.string()).optional(),
+  description: z.string().optional(),
+  properties: z.record(z.string()).optional(),
+  supportsAllDrives: z.boolean().optional()
+});
+
+// Maps to files.export in Google Drive API v3
+const DriveExportFileSchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  mimeType: z.string().min(1, "Export MIME type is required")
+});
+
+// Phase 3: Comments & Collaboration - 1:1 Mappings
+// Maps to comments.create in Google Drive API v3
+const DriveCreateCommentSchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  content: z.string().min(1, "Comment content is required"),
+  anchor: z.string().optional(),
+  quotedFileContent: z.object({
+    mimeType: z.string(),
+    value: z.string()
+  }).optional()
+});
+
+// Maps to comments.list in Google Drive API v3
+const DriveListCommentsSchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  pageSize: z.number().min(1).max(100).optional(),
+  pageToken: z.string().optional(),
+  includeDeleted: z.boolean().optional(),
+  startModifiedTime: z.string().optional()
+});
+
+// Maps to comments.get in Google Drive API v3
+const DriveGetCommentSchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  commentId: z.string().min(1, "Comment ID is required"),
+  includeDeleted: z.boolean().optional()
+});
+
+// Maps to comments.update in Google Drive API v3
+const DriveUpdateCommentSchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  commentId: z.string().min(1, "Comment ID is required"),
+  content: z.string().min(1, "Comment content is required")
+});
+
+// Maps to comments.delete in Google Drive API v3
+const DriveDeleteCommentSchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  commentId: z.string().min(1, "Comment ID is required")
+});
+
+// Maps to replies.create in Google Drive API v3
+const DriveCreateReplySchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  commentId: z.string().min(1, "Comment ID is required"),
+  content: z.string().min(1, "Reply content is required"),
+  action: z.enum(["resolve", "reopen"]).optional()
+});
+
+// Maps to replies.list in Google Drive API v3
+const DriveListRepliesSchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  commentId: z.string().min(1, "Comment ID is required"),
+  pageSize: z.number().min(1).max(100).optional(),
+  pageToken: z.string().optional(),
+  includeDeleted: z.boolean().optional()
+});
+
+// Maps to replies.get in Google Drive API v3
+const DriveGetReplySchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  commentId: z.string().min(1, "Comment ID is required"),
+  replyId: z.string().min(1, "Reply ID is required"),
+  includeDeleted: z.boolean().optional()
+});
+
+// Maps to replies.update in Google Drive API v3
+const DriveUpdateReplySchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  commentId: z.string().min(1, "Comment ID is required"),
+  replyId: z.string().min(1, "Reply ID is required"),
+  content: z.string().min(1, "Reply content is required"),
+  action: z.enum(["resolve", "reopen"]).optional()
+});
+
+// Maps to replies.delete in Google Drive API v3
+const DriveDeleteReplySchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  commentId: z.string().min(1, "Comment ID is required"),
+  replyId: z.string().min(1, "Reply ID is required")
+});
+
 const CreateGoogleSheetSchema = z.object({
   name: z.string().min(1, "Sheet name is required"),
   data: z.array(z.array(z.string())),
@@ -1575,6 +1674,182 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             corpora: { type: "string", description: "Bodies to search (user, domain, drive, allDrives)", optional: true }
           },
           required: []
+        }
+      },
+      // Phase 2: File Utilities
+      {
+        name: "drive_copyFile",
+        description: "Create a copy of a file. Maps directly to files.copy in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID to copy" },
+            name: { type: "string", description: "Name for the copy", optional: true },
+            parents: { type: "array", items: { type: "string" }, description: "Parent folder IDs for the copy", optional: true },
+            description: { type: "string", description: "Description for the copy", optional: true },
+            properties: { type: "object", description: "Custom properties for the copy", optional: true },
+            supportsAllDrives: { type: "boolean", description: "Whether to support shared drives", optional: true }
+          },
+          required: ["fileId"]
+        }
+      },
+      {
+        name: "drive_exportFile",
+        description: "Export a Google Docs/Sheets/Slides file to a different format. Maps directly to files.export in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID to export" },
+            mimeType: { type: "string", description: "Export MIME type (e.g., 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')" }
+          },
+          required: ["fileId", "mimeType"]
+        }
+      },
+      // Phase 3: Comments & Collaboration
+      {
+        name: "drive_createComment",
+        description: "Add a comment to a file. Maps directly to comments.create in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID" },
+            content: { type: "string", description: "Comment text" },
+            anchor: { type: "string", description: "Optional anchor location in document", optional: true },
+            quotedFileContent: {
+              type: "object",
+              description: "Quoted text being commented on",
+              properties: {
+                mimeType: { type: "string" },
+                value: { type: "string" }
+              },
+              optional: true
+            }
+          },
+          required: ["fileId", "content"]
+        }
+      },
+      {
+        name: "drive_listComments",
+        description: "List all comments on a file. Maps directly to comments.list in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID" },
+            pageSize: { type: "number", description: "Max results (1-100)", optional: true },
+            pageToken: { type: "string", description: "Pagination token", optional: true },
+            includeDeleted: { type: "boolean", description: "Include deleted comments", optional: true },
+            startModifiedTime: { type: "string", description: "Filter by modification time", optional: true }
+          },
+          required: ["fileId"]
+        }
+      },
+      {
+        name: "drive_getComment",
+        description: "Get a comment by ID. Maps directly to comments.get in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID" },
+            commentId: { type: "string", description: "Comment ID" },
+            includeDeleted: { type: "boolean", description: "Include deleted comment", optional: true }
+          },
+          required: ["fileId", "commentId"]
+        }
+      },
+      {
+        name: "drive_updateComment",
+        description: "Update a comment. Maps directly to comments.update in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID" },
+            commentId: { type: "string", description: "Comment ID" },
+            content: { type: "string", description: "New comment text" }
+          },
+          required: ["fileId", "commentId", "content"]
+        }
+      },
+      {
+        name: "drive_deleteComment",
+        description: "Delete a comment. Maps directly to comments.delete in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID" },
+            commentId: { type: "string", description: "Comment ID" }
+          },
+          required: ["fileId", "commentId"]
+        }
+      },
+      {
+        name: "drive_createReply",
+        description: "Add a reply to a comment. Maps directly to replies.create in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID" },
+            commentId: { type: "string", description: "Comment ID" },
+            content: { type: "string", description: "Reply text" },
+            action: { type: "string", enum: ["resolve", "reopen"], description: "Optional action", optional: true }
+          },
+          required: ["fileId", "commentId", "content"]
+        }
+      },
+      {
+        name: "drive_listReplies",
+        description: "List all replies to a comment. Maps directly to replies.list in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID" },
+            commentId: { type: "string", description: "Comment ID" },
+            pageSize: { type: "number", description: "Max results (1-100)", optional: true },
+            pageToken: { type: "string", description: "Pagination token", optional: true },
+            includeDeleted: { type: "boolean", description: "Include deleted replies", optional: true }
+          },
+          required: ["fileId", "commentId"]
+        }
+      },
+      {
+        name: "drive_getReply",
+        description: "Get a reply by ID. Maps directly to replies.get in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID" },
+            commentId: { type: "string", description: "Comment ID" },
+            replyId: { type: "string", description: "Reply ID" },
+            includeDeleted: { type: "boolean", description: "Include deleted reply", optional: true }
+          },
+          required: ["fileId", "commentId", "replyId"]
+        }
+      },
+      {
+        name: "drive_updateReply",
+        description: "Update a reply. Maps directly to replies.update in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID" },
+            commentId: { type: "string", description: "Comment ID" },
+            replyId: { type: "string", description: "Reply ID" },
+            content: { type: "string", description: "New reply text" },
+            action: { type: "string", enum: ["resolve", "reopen"], description: "Optional action", optional: true }
+          },
+          required: ["fileId", "commentId", "replyId", "content"]
+        }
+      },
+      {
+        name: "drive_deleteReply",
+        description: "Delete a reply. Maps directly to replies.delete in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID" },
+            commentId: { type: "string", description: "Comment ID" },
+            replyId: { type: "string", description: "Reply ID" }
+          },
+          required: ["fileId", "commentId", "replyId"]
         }
       },
       {
@@ -3576,6 +3851,370 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [{
             type: "text",
             text: JSON.stringify(result.data, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      // Phase 2: File Utilities
+      case "drive_copyFile": {
+        const validation = DriveCopyFileSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const requestBody: any = {};
+
+        if (args.name) {
+          requestBody.name = args.name;
+        }
+        if (args.parents) {
+          requestBody.parents = args.parents;
+        }
+        if (args.description) {
+          requestBody.description = args.description;
+        }
+        if (args.properties) {
+          requestBody.properties = args.properties;
+        }
+
+        const params: any = {
+          fileId: args.fileId,
+          requestBody,
+          fields: 'id,name,mimeType,parents,createdTime,modifiedTime'
+        };
+
+        if (args.supportsAllDrives) {
+          params.supportsAllDrives = args.supportsAllDrives;
+        }
+
+        const result = await drive.files.copy(params);
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result.data, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "drive_exportFile": {
+        const validation = DriveExportFileSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const result = await drive.files.export({
+          fileId: args.fileId,
+          mimeType: args.mimeType
+        }, {
+          responseType: 'arraybuffer'
+        });
+
+        // Return base64 encoded data for binary formats
+        const base64Data = Buffer.from(result.data as ArrayBuffer).toString('base64');
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              mimeType: args.mimeType,
+              data: base64Data,
+              encoding: 'base64'
+            }, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      // Phase 3: Comments & Collaboration
+      case "drive_createComment": {
+        const validation = DriveCreateCommentSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const requestBody: any = {
+          content: args.content
+        };
+
+        if (args.anchor) {
+          requestBody.anchor = args.anchor;
+        }
+        if (args.quotedFileContent) {
+          requestBody.quotedFileContent = args.quotedFileContent;
+        }
+
+        const result = await drive.comments.create({
+          fileId: args.fileId,
+          requestBody,
+          fields: 'id,content,author,createdTime,modifiedTime,resolved'
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result.data, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "drive_listComments": {
+        const validation = DriveListCommentsSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const params: any = {
+          fileId: args.fileId
+        };
+
+        if (args.pageSize) {
+          params.pageSize = args.pageSize;
+        }
+        if (args.pageToken) {
+          params.pageToken = args.pageToken;
+        }
+        if (args.includeDeleted !== undefined) {
+          params.includeDeleted = args.includeDeleted;
+        }
+        if (args.startModifiedTime) {
+          params.startModifiedTime = args.startModifiedTime;
+        }
+
+        const result = await drive.comments.list(params);
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result.data, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "drive_getComment": {
+        const validation = DriveGetCommentSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const params: any = {
+          fileId: args.fileId,
+          commentId: args.commentId,
+          fields: 'id,content,author,createdTime,modifiedTime,resolved,replies'
+        };
+
+        if (args.includeDeleted !== undefined) {
+          params.includeDeleted = args.includeDeleted;
+        }
+
+        const result = await drive.comments.get(params);
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result.data, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "drive_updateComment": {
+        const validation = DriveUpdateCommentSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const result = await drive.comments.update({
+          fileId: args.fileId,
+          commentId: args.commentId,
+          requestBody: {
+            content: args.content
+          },
+          fields: 'id,content,author,createdTime,modifiedTime,resolved'
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result.data, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "drive_deleteComment": {
+        const validation = DriveDeleteCommentSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        await drive.comments.delete({
+          fileId: args.fileId,
+          commentId: args.commentId
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({ success: true, commentId: args.commentId, message: "Comment deleted" }, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "drive_createReply": {
+        const validation = DriveCreateReplySchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const requestBody: any = {
+          content: args.content
+        };
+
+        if (args.action) {
+          requestBody.action = args.action;
+        }
+
+        const result = await drive.replies.create({
+          fileId: args.fileId,
+          commentId: args.commentId,
+          requestBody,
+          fields: 'id,content,author,createdTime,modifiedTime,action'
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result.data, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "drive_listReplies": {
+        const validation = DriveListRepliesSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const params: any = {
+          fileId: args.fileId,
+          commentId: args.commentId
+        };
+
+        if (args.pageSize) {
+          params.pageSize = args.pageSize;
+        }
+        if (args.pageToken) {
+          params.pageToken = args.pageToken;
+        }
+        if (args.includeDeleted !== undefined) {
+          params.includeDeleted = args.includeDeleted;
+        }
+
+        const result = await drive.replies.list(params);
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result.data, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "drive_getReply": {
+        const validation = DriveGetReplySchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const params: any = {
+          fileId: args.fileId,
+          commentId: args.commentId,
+          replyId: args.replyId,
+          fields: 'id,content,author,createdTime,modifiedTime,action'
+        };
+
+        if (args.includeDeleted !== undefined) {
+          params.includeDeleted = args.includeDeleted;
+        }
+
+        const result = await drive.replies.get(params);
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result.data, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "drive_updateReply": {
+        const validation = DriveUpdateReplySchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const requestBody: any = {
+          content: args.content
+        };
+
+        if (args.action) {
+          requestBody.action = args.action;
+        }
+
+        const result = await drive.replies.update({
+          fileId: args.fileId,
+          commentId: args.commentId,
+          replyId: args.replyId,
+          requestBody,
+          fields: 'id,content,author,createdTime,modifiedTime,action'
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result.data, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "drive_deleteReply": {
+        const validation = DriveDeleteReplySchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        await drive.replies.delete({
+          fileId: args.fileId,
+          commentId: args.commentId,
+          replyId: args.replyId
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({ success: true, replyId: args.replyId, message: "Reply deleted" }, null, 2)
           }],
           isError: false
         };

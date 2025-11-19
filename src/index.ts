@@ -1695,12 +1695,42 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "drive_exportFile",
-        description: "Export a Google Docs/Sheets/Slides file to a different format. Maps directly to files.export in Drive API v3.",
+        description: "Export a Google Docs/Sheets/Slides file to a different format. Maps directly to files.export in Drive API v3. Returns base64-encoded content. Max 10MB export size.",
         inputSchema: {
           type: "object",
           properties: {
             fileId: { type: "string", description: "File ID to export" },
-            mimeType: { type: "string", description: "Export MIME type (e.g., 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')" }
+            mimeType: {
+              type: "string",
+              description: `Export MIME type. Supported formats by document type:
+
+Google Docs:
+- application/pdf (.pdf) - PDF
+- application/vnd.openxmlformats-officedocument.wordprocessingml.document (.docx) - MS Word
+- text/markdown (.md) - Markdown
+- text/plain (.txt) - Plain text
+- application/rtf (.rtf) - Rich text
+- application/vnd.oasis.opendocument.text (.odt) - OpenDocument
+- application/zip (.zip) - HTML (zipped)
+- application/epub+zip (.epub) - EPUB
+
+Google Sheets:
+- application/pdf (.pdf) - PDF
+- application/vnd.openxmlformats-officedocument.spreadsheetml.sheet (.xlsx) - MS Excel
+- text/csv (.csv) - CSV (first sheet only)
+- text/tab-separated-values (.tsv) - TSV (first sheet only)
+- application/vnd.oasis.opendocument.spreadsheet (.ods) - OpenDocument
+- application/zip (.zip) - HTML (zipped)
+
+Google Slides:
+- application/pdf (.pdf) - PDF
+- application/vnd.openxmlformats-officedocument.presentationml.presentation (.pptx) - MS PowerPoint
+- text/plain (.txt) - Plain text
+- image/jpeg (.jpg) - JPEG (first slide only)
+- image/png (.png) - PNG (first slide only)
+- image/svg+xml (.svg) - SVG (first slide only)
+- application/vnd.oasis.opendocument.presentation (.odp) - OpenDocument`
+            }
           },
           required: ["fileId", "mimeType"]
         }

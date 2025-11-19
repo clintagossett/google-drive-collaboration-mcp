@@ -1201,6 +1201,201 @@ const SlidesUpdatePageElementTransformSchema = z.object({
   applyMode: z.enum(['RELATIVE', 'ABSOLUTE']).optional()
 });
 
+// Phase 2 Google Slides API Tools - Shape & Media Creation
+const SlidesCreateImageSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  pageObjectId: z.string().min(1, "Page object ID is required"),
+  url: z.string().url("Valid image URL is required"),
+  elementProperties: z.object({
+    pageObjectId: z.string().optional(),
+    size: z.object({
+      width: z.object({ magnitude: z.number(), unit: z.enum(['EMU', 'PT']) }),
+      height: z.object({ magnitude: z.number(), unit: z.enum(['EMU', 'PT']) })
+    }).optional(),
+    transform: z.object({
+      scaleX: z.number().optional(),
+      scaleY: z.number().optional(),
+      translateX: z.number().optional(),
+      translateY: z.number().optional(),
+      unit: z.enum(['EMU', 'PT']).optional()
+    }).optional()
+  }).optional()
+});
+
+const SlidesCreateVideoSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  pageObjectId: z.string().min(1, "Page object ID is required"),
+  source: z.enum(['YOUTUBE', 'DRIVE']),
+  id: z.string().min(1, "Video ID is required"),
+  elementProperties: z.object({
+    pageObjectId: z.string().optional(),
+    size: z.object({
+      width: z.object({ magnitude: z.number(), unit: z.enum(['EMU', 'PT']) }),
+      height: z.object({ magnitude: z.number(), unit: z.enum(['EMU', 'PT']) })
+    }).optional(),
+    transform: z.object({
+      scaleX: z.number().optional(),
+      scaleY: z.number().optional(),
+      translateX: z.number().optional(),
+      translateY: z.number().optional(),
+      unit: z.enum(['EMU', 'PT']).optional()
+    }).optional()
+  }).optional()
+});
+
+const SlidesCreateLineSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  pageObjectId: z.string().min(1, "Page object ID is required"),
+  lineCategory: z.enum(['STRAIGHT', 'BENT', 'CURVED']).optional(),
+  elementProperties: z.object({
+    pageObjectId: z.string().optional(),
+    size: z.object({
+      width: z.object({ magnitude: z.number(), unit: z.enum(['EMU', 'PT']) }),
+      height: z.object({ magnitude: z.number(), unit: z.enum(['EMU', 'PT']) })
+    }).optional(),
+    transform: z.object({
+      scaleX: z.number().optional(),
+      scaleY: z.number().optional(),
+      translateX: z.number().optional(),
+      translateY: z.number().optional(),
+      unit: z.enum(['EMU', 'PT']).optional()
+    }).optional()
+  }).optional()
+});
+
+const SlidesCreateTableSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  pageObjectId: z.string().min(1, "Page object ID is required"),
+  rows: z.number().min(1, "Must have at least 1 row"),
+  columns: z.number().min(1, "Must have at least 1 column"),
+  elementProperties: z.object({
+    pageObjectId: z.string().optional(),
+    size: z.object({
+      width: z.object({ magnitude: z.number(), unit: z.enum(['EMU', 'PT']) }),
+      height: z.object({ magnitude: z.number(), unit: z.enum(['EMU', 'PT']) })
+    }).optional(),
+    transform: z.object({
+      scaleX: z.number().optional(),
+      scaleY: z.number().optional(),
+      translateX: z.number().optional(),
+      translateY: z.number().optional(),
+      unit: z.enum(['EMU', 'PT']).optional()
+    }).optional()
+  }).optional()
+});
+
+const SlidesCreateSheetsChartSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  pageObjectId: z.string().min(1, "Page object ID is required"),
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  chartId: z.number().min(0, "Chart ID must be non-negative"),
+  linkingMode: z.enum(['LINKED', 'NOT_LINKED_IMAGE']).optional(),
+  elementProperties: z.object({
+    pageObjectId: z.string().optional(),
+    size: z.object({
+      width: z.object({ magnitude: z.number(), unit: z.enum(['EMU', 'PT']) }),
+      height: z.object({ magnitude: z.number(), unit: z.enum(['EMU', 'PT']) })
+    }).optional(),
+    transform: z.object({
+      scaleX: z.number().optional(),
+      scaleY: z.number().optional(),
+      translateX: z.number().optional(),
+      translateY: z.number().optional(),
+      unit: z.enum(['EMU', 'PT']).optional()
+    }).optional()
+  }).optional()
+});
+
+const SlidesRefreshSheetsChartSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  objectId: z.string().min(1, "Object ID is required")
+});
+
+const SlidesUpdateImagePropertiesSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  objectId: z.string().min(1, "Object ID is required"),
+  imageProperties: z.object({
+    brightness: z.number().min(-1).max(1).optional(),
+    contrast: z.number().min(-1).max(1).optional(),
+    transparency: z.number().min(0).max(1).optional(),
+    recolor: z.object({
+      recolorStops: z.array(z.object({
+        color: z.object({
+          red: z.number().min(0).max(1).optional(),
+          green: z.number().min(0).max(1).optional(),
+          blue: z.number().min(0).max(1).optional()
+        }),
+        alpha: z.number().min(0).max(1).optional(),
+        position: z.number().min(0).max(1)
+      }))
+    }).optional(),
+    outline: z.object({
+      outlineFill: z.object({
+        solidFill: z.object({
+          color: z.object({
+            red: z.number().min(0).max(1).optional(),
+            green: z.number().min(0).max(1).optional(),
+            blue: z.number().min(0).max(1).optional()
+          }),
+          alpha: z.number().min(0).max(1).optional()
+        }).optional()
+      }).optional(),
+      weight: z.object({ magnitude: z.number(), unit: z.enum(['EMU', 'PT']) }).optional(),
+      dashStyle: z.enum(['SOLID', 'DOT', 'DASH', 'DASH_DOT', 'LONG_DASH', 'LONG_DASH_DOT']).optional()
+    }).optional(),
+    shadow: z.object({
+      type: z.enum(['OUTER']),
+      alignment: z.enum(['TOP_LEFT', 'TOP_CENTER', 'TOP_RIGHT', 'LEFT_CENTER', 'CENTER', 'RIGHT_CENTER', 'BOTTOM_LEFT', 'BOTTOM_CENTER', 'BOTTOM_RIGHT']),
+      color: z.object({
+        red: z.number().min(0).max(1).optional(),
+        green: z.number().min(0).max(1).optional(),
+        blue: z.number().min(0).max(1).optional()
+      }),
+      alpha: z.number().min(0).max(1).optional(),
+      blurRadius: z.object({ magnitude: z.number(), unit: z.enum(['EMU', 'PT']) }),
+      transform: z.object({
+        scaleX: z.number().optional(),
+        scaleY: z.number().optional(),
+        translateX: z.number().optional(),
+        translateY: z.number().optional(),
+        unit: z.enum(['EMU', 'PT']).optional()
+      }).optional()
+    }).optional(),
+    cropProperties: z.object({
+      leftOffset: z.number().min(0).max(1).optional(),
+      rightOffset: z.number().min(0).max(1).optional(),
+      topOffset: z.number().min(0).max(1).optional(),
+      bottomOffset: z.number().min(0).max(1).optional(),
+      angle: z.number().optional()
+    }).optional()
+  }).optional()
+});
+
+const SlidesUpdateVideoPropertiesSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  objectId: z.string().min(1, "Object ID is required"),
+  videoProperties: z.object({
+    outline: z.object({
+      outlineFill: z.object({
+        solidFill: z.object({
+          color: z.object({
+            red: z.number().min(0).max(1).optional(),
+            green: z.number().min(0).max(1).optional(),
+            blue: z.number().min(0).max(1).optional()
+          }),
+          alpha: z.number().min(0).max(1).optional()
+        }).optional()
+      }).optional(),
+      weight: z.object({ magnitude: z.number(), unit: z.enum(['EMU', 'PT']) }).optional(),
+      dashStyle: z.enum(['SOLID', 'DOT', 'DASH', 'DASH_DOT', 'LONG_DASH', 'LONG_DASH_DOT']).optional()
+    }).optional(),
+    autoPlay: z.boolean().optional(),
+    start: z.number().min(0).optional(),
+    end: z.number().min(0).optional(),
+    mute: z.boolean().optional()
+  }).optional()
+});
+
 // Phase 1 Google Docs API Tools
 const DocsDeleteContentRangeSchema = z.object({
   documentId: z.string().min(1, "Document ID is required"),
@@ -3881,6 +4076,224 @@ Google Slides:
             }
           },
           required: ["presentationId", "objectId", "transform"]
+        }
+      },
+      {
+        name: "slides_createImage",
+        description: "Insert an image onto a slide. Maps directly to CreateImageRequest in presentations.batchUpdate. Returns batchUpdate response with created image ID.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            pageObjectId: { type: "string", description: "Slide ID where image will be inserted" },
+            url: { type: "string", format: "uri", description: "Public URL of the image" },
+            elementProperties: {
+              type: "object",
+              description: "Optional element properties (size, transform)",
+              properties: {
+                pageObjectId: { type: "string", description: "Custom object ID" },
+                size: {
+                  type: "object",
+                  properties: {
+                    width: { type: "object", properties: { magnitude: { type: "number" }, unit: { type: "string", enum: ["EMU", "PT"] } } },
+                    height: { type: "object", properties: { magnitude: { type: "number" }, unit: { type: "string", enum: ["EMU", "PT"] } } }
+                  }
+                },
+                transform: {
+                  type: "object",
+                  properties: {
+                    scaleX: { type: "number" },
+                    scaleY: { type: "number" },
+                    translateX: { type: "number" },
+                    translateY: { type: "number" },
+                    unit: { type: "string", enum: ["EMU", "PT"] }
+                  }
+                }
+              }
+            }
+          },
+          required: ["presentationId", "pageObjectId", "url"]
+        }
+      },
+      {
+        name: "slides_createVideo",
+        description: "Embed a video on a slide. Maps directly to CreateVideoRequest in presentations.batchUpdate. Supports YouTube and Google Drive videos.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            pageObjectId: { type: "string", description: "Slide ID where video will be embedded" },
+            source: { type: "string", enum: ["YOUTUBE", "DRIVE"], description: "Video source" },
+            id: { type: "string", description: "YouTube video ID or Google Drive file ID" },
+            elementProperties: {
+              type: "object",
+              description: "Optional element properties",
+              properties: {
+                size: {
+                  type: "object",
+                  properties: {
+                    width: { type: "object", properties: { magnitude: { type: "number" }, unit: { type: "string", enum: ["EMU", "PT"] } } },
+                    height: { type: "object", properties: { magnitude: { type: "number" }, unit: { type: "string", enum: ["EMU", "PT"] } } }
+                  }
+                },
+                transform: {
+                  type: "object",
+                  properties: {
+                    scaleX: { type: "number" },
+                    scaleY: { type: "number" },
+                    translateX: { type: "number" },
+                    translateY: { type: "number" },
+                    unit: { type: "string", enum: ["EMU", "PT"] }
+                  }
+                }
+              }
+            }
+          },
+          required: ["presentationId", "pageObjectId", "source", "id"]
+        }
+      },
+      {
+        name: "slides_createLine",
+        description: "Create a line or connector on a slide. Maps directly to CreateLineRequest in presentations.batchUpdate.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            pageObjectId: { type: "string", description: "Slide ID where line will be created" },
+            lineCategory: { type: "string", enum: ["STRAIGHT", "BENT", "CURVED"], description: "Optional line type" },
+            elementProperties: {
+              type: "object",
+              description: "Optional element properties",
+              properties: {
+                size: {
+                  type: "object",
+                  properties: {
+                    width: { type: "object", properties: { magnitude: { type: "number" }, unit: { type: "string", enum: ["EMU", "PT"] } } },
+                    height: { type: "object", properties: { magnitude: { type: "number" }, unit: { type: "string", enum: ["EMU", "PT"] } } }
+                  }
+                },
+                transform: {
+                  type: "object",
+                  properties: {
+                    scaleX: { type: "number" },
+                    scaleY: { type: "number" },
+                    translateX: { type: "number" },
+                    translateY: { type: "number" },
+                    unit: { type: "string", enum: ["EMU", "PT"] }
+                  }
+                }
+              }
+            }
+          },
+          required: ["presentationId", "pageObjectId"]
+        }
+      },
+      {
+        name: "slides_createTable",
+        description: "Insert a table on a slide. Maps directly to CreateTableRequest in presentations.batchUpdate.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            pageObjectId: { type: "string", description: "Slide ID where table will be inserted" },
+            rows: { type: "number", minimum: 1, description: "Number of rows" },
+            columns: { type: "number", minimum: 1, description: "Number of columns" },
+            elementProperties: {
+              type: "object",
+              description: "Optional element properties",
+              properties: {
+                size: {
+                  type: "object",
+                  properties: {
+                    width: { type: "object", properties: { magnitude: { type: "number" }, unit: { type: "string", enum: ["EMU", "PT"] } } },
+                    height: { type: "object", properties: { magnitude: { type: "number" }, unit: { type: "string", enum: ["EMU", "PT"] } } }
+                  }
+                },
+                transform: {
+                  type: "object",
+                  properties: {
+                    scaleX: { type: "number" },
+                    scaleY: { type: "number" },
+                    translateX: { type: "number" },
+                    translateY: { type: "number" },
+                    unit: { type: "string", enum: ["EMU", "PT"] }
+                  }
+                }
+              }
+            }
+          },
+          required: ["presentationId", "pageObjectId", "rows", "columns"]
+        }
+      },
+      {
+        name: "slides_createSheetsChart",
+        description: "Embed a Google Sheets chart on a slide. Maps directly to CreateSheetsChartRequest in presentations.batchUpdate.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            pageObjectId: { type: "string", description: "Slide ID" },
+            spreadsheetId: { type: "string", description: "Google Sheets spreadsheet ID" },
+            chartId: { type: "number", minimum: 0, description: "Chart ID from the spreadsheet" },
+            linkingMode: { type: "string", enum: ["LINKED", "NOT_LINKED_IMAGE"], description: "Optional linking mode" },
+            elementProperties: { type: "object", description: "Optional element properties" }
+          },
+          required: ["presentationId", "pageObjectId", "spreadsheetId", "chartId"]
+        }
+      },
+      {
+        name: "slides_refreshSheetsChart",
+        description: "Refresh a linked Sheets chart. Maps directly to RefreshSheetsChartRequest in presentations.batchUpdate.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            objectId: { type: "string", description: "Chart object ID to refresh" }
+          },
+          required: ["presentationId", "objectId"]
+        }
+      },
+      {
+        name: "slides_updateImageProperties",
+        description: "Adjust image properties (brightness, contrast, etc.). Maps directly to UpdateImagePropertiesRequest in presentations.batchUpdate.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            objectId: { type: "string", description: "Image object ID" },
+            imageProperties: {
+              type: "object",
+              description: "Image properties to update",
+              properties: {
+                brightness: { type: "number", minimum: -1, maximum: 1, description: "Brightness (-1 to 1)" },
+                contrast: { type: "number", minimum: -1, maximum: 1, description: "Contrast (-1 to 1)" },
+                transparency: { type: "number", minimum: 0, maximum: 1, description: "Transparency (0 to 1)" }
+              }
+            }
+          },
+          required: ["presentationId", "objectId"]
+        }
+      },
+      {
+        name: "slides_updateVideoProperties",
+        description: "Configure video playback properties. Maps directly to UpdateVideoPropertiesRequest in presentations.batchUpdate.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            objectId: { type: "string", description: "Video object ID" },
+            videoProperties: {
+              type: "object",
+              description: "Video properties to update",
+              properties: {
+                autoPlay: { type: "boolean", description: "Auto-play on slide show" },
+                start: { type: "number", minimum: 0, description: "Start time in seconds" },
+                end: { type: "number", minimum: 0, description: "End time in seconds" },
+                mute: { type: "boolean", description: "Mute audio" }
+              }
+            }
+          },
+          required: ["presentationId", "objectId"]
         }
       },
       {
@@ -8880,6 +9293,352 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           };
         } catch (error: any) {
           return errorResponse(error.message || 'Failed to update page element transform');
+        }
+      }
+
+      case "slides_createImage": {
+        const validation = SlidesCreateImageSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          // Build createImage request
+          const createImageRequest: any = {
+            url: args.url
+          };
+
+          if (args.elementProperties) {
+            createImageRequest.elementProperties = {};
+            if (args.elementProperties.pageObjectId) {
+              createImageRequest.elementProperties.pageObjectId = args.pageObjectId;
+            }
+            if (args.elementProperties.size) {
+              createImageRequest.elementProperties.size = args.elementProperties.size;
+            }
+            if (args.elementProperties.transform) {
+              createImageRequest.elementProperties.transform = args.elementProperties.transform;
+            }
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                createImage: createImageRequest
+              }]
+            }
+          });
+
+          // Return raw API response as JSON
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to create image');
+        }
+      }
+
+      case "slides_createVideo": {
+        const validation = SlidesCreateVideoSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const createVideoRequest: any = {
+            source: args.source,
+            id: args.id
+          };
+
+          if (args.elementProperties) {
+            createVideoRequest.elementProperties = {};
+            if (args.elementProperties.size) {
+              createVideoRequest.elementProperties.size = args.elementProperties.size;
+            }
+            if (args.elementProperties.transform) {
+              createVideoRequest.elementProperties.transform = args.elementProperties.transform;
+            }
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                createVideo: createVideoRequest
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to create video');
+        }
+      }
+
+      case "slides_createLine": {
+        const validation = SlidesCreateLineSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const createLineRequest: any = {};
+
+          if (args.lineCategory) {
+            createLineRequest.lineCategory = args.lineCategory;
+          }
+
+          if (args.elementProperties) {
+            createLineRequest.elementProperties = {};
+            if (args.elementProperties.size) {
+              createLineRequest.elementProperties.size = args.elementProperties.size;
+            }
+            if (args.elementProperties.transform) {
+              createLineRequest.elementProperties.transform = args.elementProperties.transform;
+            }
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                createLine: createLineRequest
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to create line');
+        }
+      }
+
+      case "slides_createTable": {
+        const validation = SlidesCreateTableSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const createTableRequest: any = {
+            rows: args.rows,
+            columns: args.columns
+          };
+
+          if (args.elementProperties) {
+            createTableRequest.elementProperties = {};
+            if (args.elementProperties.size) {
+              createTableRequest.elementProperties.size = args.elementProperties.size;
+            }
+            if (args.elementProperties.transform) {
+              createTableRequest.elementProperties.transform = args.elementProperties.transform;
+            }
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                createTable: createTableRequest
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to create table');
+        }
+      }
+
+      case "slides_createSheetsChart": {
+        const validation = SlidesCreateSheetsChartSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const createSheetsChartRequest: any = {
+            spreadsheetId: args.spreadsheetId,
+            chartId: args.chartId
+          };
+
+          if (args.linkingMode) {
+            createSheetsChartRequest.linkingMode = args.linkingMode;
+          }
+
+          if (args.elementProperties) {
+            createSheetsChartRequest.elementProperties = args.elementProperties;
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                createSheetsChart: createSheetsChartRequest
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to create Sheets chart');
+        }
+      }
+
+      case "slides_refreshSheetsChart": {
+        const validation = SlidesRefreshSheetsChartSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                refreshSheetsChart: {
+                  objectId: args.objectId
+                }
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to refresh Sheets chart');
+        }
+      }
+
+      case "slides_updateImageProperties": {
+        const validation = SlidesUpdateImagePropertiesSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const updateImagePropertiesRequest: any = {
+            objectId: args.objectId
+          };
+
+          if (args.imageProperties) {
+            updateImagePropertiesRequest.imageProperties = args.imageProperties;
+            updateImagePropertiesRequest.fields = Object.keys(args.imageProperties).map(k => `imageProperties.${k}`).join(',');
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                updateImageProperties: updateImagePropertiesRequest
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to update image properties');
+        }
+      }
+
+      case "slides_updateVideoProperties": {
+        const validation = SlidesUpdateVideoPropertiesSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const updateVideoPropertiesRequest: any = {
+            objectId: args.objectId
+          };
+
+          if (args.videoProperties) {
+            updateVideoPropertiesRequest.videoProperties = args.videoProperties;
+            updateVideoPropertiesRequest.fields = Object.keys(args.videoProperties).map(k => `videoProperties.${k}`).join(',');
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                updateVideoProperties: updateVideoPropertiesRequest
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to update video properties');
         }
       }
 

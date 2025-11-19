@@ -1604,6 +1604,31 @@ const SlidesUnmergeTableCellsSchema = z.object({
   })
 });
 
+// Phase 5 Zod Schemas (Issue #7 - Advanced Element Operations)
+const SlidesUpdatePageElementAltTextSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  objectId: z.string().min(1, "Object ID is required"),
+  title: z.string().optional(),
+  description: z.string().optional()
+});
+
+const SlidesUpdatePageElementsZOrderSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  pageElementObjectIds: z.array(z.string()).min(1, "At least one element ID is required"),
+  operation: z.enum(['BRING_TO_FRONT', 'SEND_TO_BACK', 'BRING_FORWARD', 'SEND_BACKWARD'])
+});
+
+const SlidesGroupObjectsSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  childrenObjectIds: z.array(z.string()).min(2, "At least two objects are required to group"),
+  groupObjectId: z.string().optional()
+});
+
+const SlidesUngroupObjectsSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  objectIds: z.array(z.string()).min(1, "At least one group ID is required")
+});
+
 // Phase 1 Google Docs API Tools
 const DocsDeleteContentRangeSchema = z.object({
   documentId: z.string().min(1, "Document ID is required"),
@@ -4720,6 +4745,58 @@ Google Slides:
             tableRange: { type: "object", description: "Range containing merged cells to unmerge" }
           },
           required: ["presentationId", "objectId", "tableRange"]
+        }
+      },
+      {
+        name: "slides_updatePageElementAltText",
+        description: "Set alt text for accessibility. Maps directly to UpdatePageElementAltTextRequest in presentations.batchUpdate.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            objectId: { type: "string", description: "Element object ID" },
+            title: { type: "string", description: "Alt text title" },
+            description: { type: "string", description: "Alt text description" }
+          },
+          required: ["presentationId", "objectId"]
+        }
+      },
+      {
+        name: "slides_updatePageElementsZOrder",
+        description: "Change z-order (layering) of elements. Maps directly to UpdatePageElementsZOrderRequest in presentations.batchUpdate.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            pageElementObjectIds: { type: "array", items: { type: "string" }, minItems: 1, description: "Elements to reorder" },
+            operation: { type: "string", enum: ["BRING_TO_FRONT", "SEND_TO_BACK", "BRING_FORWARD", "SEND_BACKWARD"], description: "Z-order operation" }
+          },
+          required: ["presentationId", "pageElementObjectIds", "operation"]
+        }
+      },
+      {
+        name: "slides_groupObjects",
+        description: "Group multiple elements together. Maps directly to GroupObjectsRequest in presentations.batchUpdate.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            childrenObjectIds: { type: "array", items: { type: "string" }, minItems: 2, description: "Elements to group (minimum 2)" },
+            groupObjectId: { type: "string", description: "Optional ID for group" }
+          },
+          required: ["presentationId", "childrenObjectIds"]
+        }
+      },
+      {
+        name: "slides_ungroupObjects",
+        description: "Ungroup a group of elements. Maps directly to UngroupObjectsRequest in presentations.batchUpdate.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            objectIds: { type: "array", items: { type: "string" }, minItems: 1, description: "Group IDs to ungroup" }
+          },
+          required: ["presentationId", "objectIds"]
         }
       },
       {
@@ -10588,6 +10665,155 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           };
         } catch (error: any) {
           return errorResponse(error.message || 'Failed to unmerge table cells');
+        }
+      }
+
+      case "slides_updatePageElementAltText": {
+        const validation = SlidesUpdatePageElementAltTextSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const updateRequest: any = {
+            objectId: args.objectId
+          };
+
+          if (args.title !== undefined) {
+            updateRequest.title = args.title;
+          }
+
+          if (args.description !== undefined) {
+            updateRequest.description = args.description;
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                updatePageElementAltText: updateRequest
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to update page element alt text');
+        }
+      }
+
+      case "slides_updatePageElementsZOrder": {
+        const validation = SlidesUpdatePageElementsZOrderSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                updatePageElementsZOrder: {
+                  pageElementObjectIds: args.pageElementObjectIds,
+                  operation: args.operation
+                }
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to update page elements z-order');
+        }
+      }
+
+      case "slides_groupObjects": {
+        const validation = SlidesGroupObjectsSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const groupRequest: any = {
+            childrenObjectIds: args.childrenObjectIds
+          };
+
+          if (args.groupObjectId) {
+            groupRequest.groupObjectId = args.groupObjectId;
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                groupObjects: groupRequest
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to group objects');
+        }
+      }
+
+      case "slides_ungroupObjects": {
+        const validation = SlidesUngroupObjectsSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                ungroupObjects: {
+                  objectIds: args.objectIds
+                }
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to ungroup objects');
         }
       }
 

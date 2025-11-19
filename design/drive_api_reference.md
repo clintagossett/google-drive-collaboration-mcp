@@ -23,29 +23,56 @@ The Google Drive API v3 provides programmatic access to Google Drive file storag
 
 ## Current MCP Tool Coverage
 
-### ✅ Implemented Tools (8 tools)
+### ✅ Implemented Tools (22 tools) - 96% of in-scope Drive API
 
-**File Management** (compliant with 1:1 design):
-1. `search` - Maps to `files.list` with query
-2. `createTextFile` - Maps to `files.create` (text/plain)
-3. `updateTextFile` - Maps to `files.update` (text content)
-4. `createFolder` - Maps to `files.create` (folder MIME type)
-5. `listFolder` - Maps to `files.list` with parent filter
-6. `deleteItem` - Maps to `files.update` (move to trash)
-7. `renameItem` - Maps to `files.update` (name only)
-8. `moveItem` - Maps to `files.update` (parent change)
+**Phase 1: Essential File Operations** (5 tools):
+1. `drive_createFile` - Maps to `files.create`
+2. `drive_getFile` - Maps to `files.get`
+3. `drive_updateFile` - Maps to `files.update`
+4. `drive_deleteFile` - Maps to `files.update` (trash)
+5. `drive_listFiles` - Maps to `files.list`
+
+**Phase 2: File Utilities** (2 tools):
+6. `drive_copyFile` - Maps to `files.copy`
+7. `drive_exportFile` - Maps to `files.export`
+
+**Phase 3: Comments & Collaboration** (10 tools):
+8. `drive_createComment` - Maps to `comments.create`
+9. `drive_listComments` - Maps to `comments.list`
+10. `drive_getComment` - Maps to `comments.get`
+11. `drive_updateComment` - Maps to `comments.update`
+12. `drive_deleteComment` - Maps to `comments.delete`
+13. `drive_createReply` - Maps to `replies.create`
+14. `drive_listReplies` - Maps to `replies.list`
+15. `drive_getReply` - Maps to `replies.get`
+16. `drive_updateReply` - Maps to `replies.update`
+17. `drive_deleteReply` - Maps to `replies.delete`
+
+**Phase 4: Sharing & Permissions** (5 tools):
+18. `drive_createPermission` - Maps to `permissions.create`
+19. `drive_listPermissions` - Maps to `permissions.list`
+20. `drive_getPermission` - Maps to `permissions.get`
+21. `drive_updatePermission` - Maps to `permissions.update`
+22. `drive_deletePermission` - Maps to `permissions.delete`
+
+**Legacy Tools** (compliant with 1:1 design, predating naming convention):
+- `search` - Maps to `files.list` with query
+- `createTextFile` - Maps to `files.create` (text/plain)
+- `updateTextFile` - Maps to `files.update` (text content)
+- `createFolder` - Maps to `files.create` (folder MIME type)
+- `listFolder` - Maps to `files.list` with parent filter
+- `deleteItem` - Maps to `files.update` (move to trash)
+- `renameItem` - Maps to `files.update` (name only)
+- `moveItem` - Maps to `files.update` (parent change)
 
 **Convenience Tools** (violate 1:1 design, to be deprecated):
 - `createGoogleSheet` - Multi-step (Drive + Sheets)
 - `updateGoogleSheet` - Multi-step (Sheets only, not Drive)
 - `getGoogleSlidesContent` - Custom formatting
 
-### ❌ Not Implemented (20+ operations)
+### ❌ Not Implemented (1 operation)
 
-**Files Resource**: 5 methods missing
-**Permissions Resource**: 5 methods missing (0% coverage)
-**Comments Resource**: 5 methods missing (0% coverage)
-**Replies Resource**: 5 methods missing (0% coverage)
+**Files Resource**: 1 method remaining (`files.emptyTrash`)
 
 ---
 
@@ -339,9 +366,7 @@ The Google Drive API v3 provides programmatic access to Google Drive file storag
 - `sendNotificationEmail` (boolean): Send email notification
 - `emailMessage` (string): Custom message in notification
 
-**Current MCP Tool**: None ❌
-
-**Proposed Tool**: `drive_createPermission`
+**Current MCP Tool**: ✅ `drive_createPermission` (Phase 4)
 
 **Use Cases**:
 - Share file with specific user
@@ -358,9 +383,7 @@ The Google Drive API v3 provides programmatic access to Google Drive file storag
 - `permissionId` (string): The permission to remove
 - `supportsAllDrives` (boolean): Support shared drives
 
-**Current MCP Tool**: None ❌
-
-**Proposed Tool**: `drive_deletePermission`
+**Current MCP Tool**: ✅ `drive_deletePermission` (Phase 4)
 
 **Use Cases**:
 - Revoke user access
@@ -377,9 +400,7 @@ The Google Drive API v3 provides programmatic access to Google Drive file storag
 - `fields` (string): Fields to include
 - `supportsAllDrives` (boolean): Support shared drives
 
-**Current MCP Tool**: None ❌
-
-**Proposed Tool**: `drive_getPermission`
+**Current MCP Tool**: ✅ `drive_getPermission` (Phase 4)
 
 ---
 
@@ -393,9 +414,7 @@ The Google Drive API v3 provides programmatic access to Google Drive file storag
 - `fields` (string): Fields to include
 - `supportsAllDrives` (boolean): Support shared drives
 
-**Current MCP Tool**: None ❌
-
-**Proposed Tool**: `drive_listPermissions`
+**Current MCP Tool**: ✅ `drive_listPermissions` (Phase 4)
 
 **Use Cases**:
 - See who has access
@@ -413,9 +432,7 @@ The Google Drive API v3 provides programmatic access to Google Drive file storag
 - `removeExpiration` (boolean): Remove expiration
 - `transferOwnership` (boolean): Transfer ownership
 
-**Current MCP Tool**: None ❌
-
-**Proposed Tool**: `drive_updatePermission`
+**Current MCP Tool**: ✅ `drive_updatePermission` (Phase 4)
 
 **Use Cases**:
 - Change user from viewer to editor
@@ -690,12 +707,12 @@ The Google Drive API v3 provides programmatic access to Google Drive file storag
 **In Scope**: 23 methods (82%)
 **Out of Scope**: 5 methods (18%) - webhooks, labels, ID generation
 
-**Current Coverage**: 17 tools (74% of in-scope) ✅
-**To Implement**: 6 tools (26% of in-scope)
+**Current Coverage**: 22 tools (96% of in-scope) ✅
+**To Implement**: 1 tool (4% of in-scope)
 
 **Breakdown by Resource**:
 - **Files**: 7/9 in-scope methods implemented (78%) ✅ Phase 1 & 2 complete
-- **Permissions**: 0/5 methods implemented (0%)
+- **Permissions**: 5/5 methods implemented (100%) ✅ Phase 4 complete
 - **Comments**: 5/5 methods implemented (100%) ✅ Phase 3 complete
 - **Replies**: 5/5 methods implemented (100%) ✅ Phase 3 complete
 
@@ -703,7 +720,7 @@ The Google Drive API v3 provides programmatic access to Google Drive file storag
 - ✅ **Phase 1 COMPLETE** (5 tools) - Essential File Operations
 - ✅ **Phase 2 COMPLETE** (2 tools) - File Utilities
 - ✅ **Phase 3 COMPLETE** (10 tools) - Comments & Collaboration
-- ⏭️ **Phase 4 PENDING** (5 tools) - Sharing & Permissions
+- ✅ **Phase 4 COMPLETE** (5 tools) - Sharing & Permissions
 - ⏭️ **Phase 5 PENDING** (1 tool) - Advanced Operations
 
 ---

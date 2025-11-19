@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Question or Discussion
+    url: https://github.com/clintagossett/google-drive-mcp/discussions
+    about: Ask questions or discuss ideas in GitHub Discussions
+  - name: Original Project (upstream)
+    url: https://github.com/piotr-agier/google-drive-mcp
+    about: Visit the original project by Piotr Agier

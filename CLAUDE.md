@@ -155,6 +155,27 @@ NEVER batch implement multiple tools before writing tests!
 ❌ Test all tools  ← NO! Tests must be per-tool!
 ```
 
+## Bug Reports and Feature Requests
+
+**As of 2025-11-18**: All bugs, issues, and feature requests are tracked in **GitHub Issues**.
+
+### 🐛 Report a Bug
+- **Template**: https://github.com/clintagossett/google-drive-mcp/issues/new/choose
+- **Select**: "Bug Report" template
+- **Include**: Severity, affected tools, reproduction steps, expected vs actual behavior
+
+### ✨ Request a Feature
+- **Template**: https://github.com/clintagossett/google-drive-mcp/issues/new/choose
+- **Select**: "Feature Request" template
+- **Include**: Problem statement, proposed solution, use case, priority
+
+### 💬 Ask Questions
+- **Use**: GitHub Discussions - https://github.com/clintagossett/google-drive-mcp/discussions
+- For general questions, discussions, or help
+
+### 📝 Historical Issues
+- **Reference**: `docs/development/known_issues.md` (now contains resolved issues only)
+
 ## Quick Reminder Checklist
 
 Before starting any new tool:
@@ -163,3 +184,10 @@ Before starting any new tool:
 - [ ] Understand: Tests are PART of implementation
 - [ ] Structure todos as "Implement X (code + tests)"
 - [ ] Run `npm test` after EACH tool, not at end
+
+Before reporting a bug or requesting a feature:
+- [ ] Search existing GitHub Issues for duplicates
+- [ ] Use the appropriate issue template
+- [ ] Do NOT share production documents or sensitive data
+- [ ] Provide clear reproduction steps (for bugs)
+- [ ] Explain the use case (for features)

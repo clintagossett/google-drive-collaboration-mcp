@@ -295,6 +295,51 @@ const MoveItemSchema = z.object({
   destinationFolderId: z.string().optional()
 });
 
+// Phase 1: Essential Drive API Operations - 1:1 Mappings
+// Maps to files.create in Google Drive API v3
+const DriveCreateFileSchema = z.object({
+  name: z.string().min(1, "File name is required"),
+  mimeType: z.string().min(1, "MIME type is required"),
+  parents: z.array(z.string()).optional(),
+  description: z.string().optional(),
+  properties: z.record(z.string()).optional()
+});
+
+// Maps to files.get in Google Drive API v3
+const DriveGetFileSchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  fields: z.string().optional(),
+  supportsAllDrives: z.boolean().optional()
+});
+
+// Maps to files.update in Google Drive API v3
+const DriveUpdateFileSchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  name: z.string().optional(),
+  mimeType: z.string().optional(),
+  parents: z.array(z.string()).optional(),
+  trashed: z.boolean().optional(),
+  description: z.string().optional(),
+  properties: z.record(z.string()).optional()
+});
+
+// Maps to files.delete in Google Drive API v3
+const DriveDeleteFileSchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  supportsAllDrives: z.boolean().optional()
+});
+
+// Maps to files.list in Google Drive API v3
+const DriveListFilesSchema = z.object({
+  q: z.string().optional(),
+  pageSize: z.number().min(1).max(1000).optional(),
+  pageToken: z.string().optional(),
+  orderBy: z.string().optional(),
+  fields: z.string().optional(),
+  spaces: z.string().optional(),
+  corpora: z.string().optional()
+});
+
 const CreateGoogleSheetSchema = z.object({
   name: z.string().min(1, "Sheet name is required"),
   data: z.array(z.array(z.string())),
@@ -1455,6 +1500,81 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             destinationFolderId: { type: "string", description: "Destination folder ID", optional: true }
           },
           required: ["itemId"]
+        }
+      },
+      // Phase 1: Essential Drive API Operations
+      {
+        name: "drive_createFile",
+        description: "Create a new file or folder in Google Drive. Maps directly to files.create in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "File or folder name" },
+            mimeType: { type: "string", description: "MIME type (e.g., 'application/vnd.google-apps.document', 'application/vnd.google-apps.folder')" },
+            parents: { type: "array", items: { type: "string" }, description: "Parent folder IDs", optional: true },
+            description: { type: "string", description: "File description", optional: true },
+            properties: { type: "object", description: "Custom key-value properties", optional: true }
+          },
+          required: ["name", "mimeType"]
+        }
+      },
+      {
+        name: "drive_getFile",
+        description: "Get a file's metadata by ID. Maps directly to files.get in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID" },
+            fields: { type: "string", description: "Fields to include in response (e.g., 'id,name,mimeType,parents')", optional: true },
+            supportsAllDrives: { type: "boolean", description: "Whether to support shared drives", optional: true }
+          },
+          required: ["fileId"]
+        }
+      },
+      {
+        name: "drive_updateFile",
+        description: "Update a file's metadata. Maps directly to files.update in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID" },
+            name: { type: "string", description: "New name", optional: true },
+            mimeType: { type: "string", description: "New MIME type", optional: true },
+            parents: { type: "array", items: { type: "string" }, description: "New parent folder IDs", optional: true },
+            trashed: { type: "boolean", description: "Move to/from trash", optional: true },
+            description: { type: "string", description: "New description", optional: true },
+            properties: { type: "object", description: "Update custom properties", optional: true }
+          },
+          required: ["fileId"]
+        }
+      },
+      {
+        name: "drive_deleteFile",
+        description: "Permanently delete a file (bypasses trash). Maps directly to files.delete in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File ID" },
+            supportsAllDrives: { type: "boolean", description: "Whether to support shared drives", optional: true }
+          },
+          required: ["fileId"]
+        }
+      },
+      {
+        name: "drive_listFiles",
+        description: "List or search for files. Maps directly to files.list in Drive API v3.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            q: { type: "string", description: "Query string (e.g., \"name contains 'report'\")", optional: true },
+            pageSize: { type: "number", description: "Max results per page (1-1000)", optional: true },
+            pageToken: { type: "string", description: "Token for next page", optional: true },
+            orderBy: { type: "string", description: "Sort order (e.g., 'modifiedTime desc')", optional: true },
+            fields: { type: "string", description: "Fields to include", optional: true },
+            spaces: { type: "string", description: "Spaces to search (drive, appDataFolder, photos)", optional: true },
+            corpora: { type: "string", description: "Bodies to search (user, domain, drive, allDrives)", optional: true }
+          },
+          required: []
         }
       },
       {
@@ -3279,6 +3399,183 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [{
             type: "text",
             text: `Successfully moved "${item.data.name}" to "${destinationFolder.data.name}"`
+          }],
+          isError: false
+        };
+      }
+
+      // Phase 1: Essential Drive API Operations
+      case "drive_createFile": {
+        const validation = DriveCreateFileSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const fileMetadata: any = {
+          name: args.name,
+          mimeType: args.mimeType
+        };
+
+        if (args.parents) {
+          fileMetadata.parents = args.parents;
+        }
+        if (args.description) {
+          fileMetadata.description = args.description;
+        }
+        if (args.properties) {
+          fileMetadata.properties = args.properties;
+        }
+
+        const result = await drive.files.create({
+          requestBody: fileMetadata,
+          fields: 'id,name,mimeType,parents,createdTime,modifiedTime'
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result.data, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "drive_getFile": {
+        const validation = DriveGetFileSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const params: any = {
+          fileId: args.fileId
+        };
+
+        if (args.fields) {
+          params.fields = args.fields;
+        }
+        if (args.supportsAllDrives !== undefined) {
+          params.supportsAllDrives = args.supportsAllDrives;
+        }
+
+        const result = await drive.files.get(params);
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result.data, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "drive_updateFile": {
+        const validation = DriveUpdateFileSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const fileMetadata: any = {};
+
+        if (args.name !== undefined) {
+          fileMetadata.name = args.name;
+        }
+        if (args.mimeType !== undefined) {
+          fileMetadata.mimeType = args.mimeType;
+        }
+        if (args.parents !== undefined) {
+          fileMetadata.parents = args.parents;
+        }
+        if (args.trashed !== undefined) {
+          fileMetadata.trashed = args.trashed;
+        }
+        if (args.description !== undefined) {
+          fileMetadata.description = args.description;
+        }
+        if (args.properties !== undefined) {
+          fileMetadata.properties = args.properties;
+        }
+
+        const result = await drive.files.update({
+          fileId: args.fileId,
+          requestBody: fileMetadata,
+          fields: 'id,name,mimeType,parents,modifiedTime,trashed'
+        });
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result.data, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "drive_deleteFile": {
+        const validation = DriveDeleteFileSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const params: any = {
+          fileId: args.fileId
+        };
+
+        if (args.supportsAllDrives !== undefined) {
+          params.supportsAllDrives = args.supportsAllDrives;
+        }
+
+        await drive.files.delete(params);
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({ success: true, fileId: args.fileId, message: "File permanently deleted" }, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "drive_listFiles": {
+        const validation = DriveListFilesSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const params: any = {};
+
+        if (args.q) {
+          params.q = args.q;
+        }
+        if (args.pageSize) {
+          params.pageSize = args.pageSize;
+        }
+        if (args.pageToken) {
+          params.pageToken = args.pageToken;
+        }
+        if (args.orderBy) {
+          params.orderBy = args.orderBy;
+        }
+        if (args.fields) {
+          params.fields = args.fields;
+        }
+        if (args.spaces) {
+          params.spaces = args.spaces;
+        }
+        if (args.corpora) {
+          params.corpora = args.corpora;
+        }
+
+        const result = await drive.files.list(params);
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result.data, null, 2)
           }],
           isError: false
         };

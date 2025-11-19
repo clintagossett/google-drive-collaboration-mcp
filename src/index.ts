@@ -1120,6 +1120,87 @@ const SlidesDuplicateObjectSchema = z.object({
   objectIds: z.record(z.string()).optional()
 });
 
+const SlidesInsertTextSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  objectId: z.string().min(1, "Object ID is required"),
+  text: z.string(),
+  insertionIndex: z.number().min(0, "Insertion index must be at least 0").optional(),
+  cellLocation: z.object({
+    rowIndex: z.number().min(0),
+    columnIndex: z.number().min(0)
+  }).optional()
+});
+
+const SlidesDeleteTextSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  objectId: z.string().min(1, "Object ID is required"),
+  textRange: z.object({
+    startIndex: z.number().min(0, "Start index must be at least 0").optional(),
+    endIndex: z.number().min(0, "End index must be at least 0").optional(),
+    type: z.enum(['FIXED_RANGE', 'FROM_START_INDEX', 'ALL']).optional()
+  }).optional(),
+  cellLocation: z.object({
+    rowIndex: z.number().min(0),
+    columnIndex: z.number().min(0)
+  }).optional()
+});
+
+const SlidesReplaceAllTextSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  containsText: z.object({
+    text: z.string().min(1, "Search text is required"),
+    matchCase: z.boolean().optional()
+  }),
+  replaceText: z.string(),
+  pageObjectIds: z.array(z.string()).optional()
+});
+
+const SlidesCreateParagraphBulletsSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  objectId: z.string().min(1, "Object ID is required"),
+  textRange: z.object({
+    startIndex: z.number().min(0, "Start index must be at least 0").optional(),
+    endIndex: z.number().min(0, "End index must be at least 0").optional(),
+    type: z.enum(['FIXED_RANGE', 'FROM_START_INDEX', 'ALL']).optional()
+  }).optional(),
+  bulletPreset: z.enum([
+    'BULLET_DISC_CIRCLE_SQUARE',
+    'BULLET_DIAMONDX_ARROW3D_SQUARE',
+    'BULLET_CHECKBOX',
+    'BULLET_ARROW_DIAMOND_DISC',
+    'BULLET_STAR_CIRCLE_SQUARE',
+    'BULLET_ARROW3D_CIRCLE_SQUARE',
+    'BULLET_LEFTTRIANGLE_DIAMOND_DISC',
+    'BULLET_DIAMONDX_HOLLOWDIAMOND_SQUARE',
+    'BULLET_DIAMOND_CIRCLE_SQUARE',
+    'NUMBERED_DIGIT_ALPHA_ROMAN',
+    'NUMBERED_DIGIT_ALPHA_ROMAN_PARENS',
+    'NUMBERED_DIGIT_NESTED',
+    'NUMBERED_UPPERALPHA_ALPHA_ROMAN',
+    'NUMBERED_UPPERROMAN_UPPERALPHA_DIGIT',
+    'NUMBERED_ZERODECIMAL_ALPHA_ROMAN'
+  ]).optional(),
+  cellLocation: z.object({
+    rowIndex: z.number().min(0),
+    columnIndex: z.number().min(0)
+  }).optional()
+});
+
+const SlidesUpdatePageElementTransformSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  objectId: z.string().min(1, "Object ID is required"),
+  transform: z.object({
+    scaleX: z.number().optional(),
+    scaleY: z.number().optional(),
+    shearX: z.number().optional(),
+    shearY: z.number().optional(),
+    translateX: z.number().optional(),
+    translateY: z.number().optional(),
+    unit: z.enum(['EMU', 'PT']).optional()
+  }),
+  applyMode: z.enum(['RELATIVE', 'ABSOLUTE']).optional()
+});
+
 // Phase 1 Google Docs API Tools
 const DocsDeleteContentRangeSchema = z.object({
   documentId: z.string().min(1, "Document ID is required"),
@@ -3640,6 +3721,166 @@ Google Slides:
             objectIds: { type: "object", description: "Optional ID mappings for duplicated objects (record of old ID to new ID)" }
           },
           required: ["presentationId", "objectId"]
+        }
+      },
+      {
+        name: "slides_insertText",
+        description: "Insert text into a shape or table cell. Maps directly to InsertTextRequest in presentations.batchUpdate. Returns batchUpdate response.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            objectId: { type: "string", description: "ID of the shape or table containing the text" },
+            text: { type: "string", description: "Text to insert" },
+            insertionIndex: { type: "number", description: "Optional 0-based insertion index. If omitted, text is appended." },
+            cellLocation: {
+              type: "object",
+              description: "Optional table cell location. Required if objectId is a table.",
+              properties: {
+                rowIndex: { type: "number", description: "Row index (0-based)" },
+                columnIndex: { type: "number", description: "Column index (0-based)" }
+              },
+              required: ["rowIndex", "columnIndex"]
+            }
+          },
+          required: ["presentationId", "objectId", "text"]
+        }
+      },
+      {
+        name: "slides_deleteText",
+        description: "Delete text from a shape or table cell. Maps directly to DeleteTextRequest in presentations.batchUpdate. Returns batchUpdate response.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            objectId: { type: "string", description: "ID of the shape or table containing the text" },
+            textRange: {
+              type: "object",
+              description: "Optional text range to delete. If omitted, all text is deleted.",
+              properties: {
+                startIndex: { type: "number", description: "Start index (0-based, inclusive)" },
+                endIndex: { type: "number", description: "End index (0-based, exclusive)" },
+                type: { type: "string", enum: ["FIXED_RANGE", "FROM_START_INDEX", "ALL"], description: "Range type" }
+              }
+            },
+            cellLocation: {
+              type: "object",
+              description: "Optional table cell location. Required if objectId is a table.",
+              properties: {
+                rowIndex: { type: "number", description: "Row index (0-based)" },
+                columnIndex: { type: "number", description: "Column index (0-based)" }
+              },
+              required: ["rowIndex", "columnIndex"]
+            }
+          },
+          required: ["presentationId", "objectId"]
+        }
+      },
+      {
+        name: "slides_replaceAllText",
+        description: "Find and replace all instances of text. Maps directly to ReplaceAllTextRequest in presentations.batchUpdate. Returns batchUpdate response with occurrence count.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            containsText: {
+              type: "object",
+              description: "Text search criteria",
+              properties: {
+                text: { type: "string", description: "Text to search for" },
+                matchCase: { type: "boolean", description: "Whether to match case (default: false)" }
+              },
+              required: ["text"]
+            },
+            replaceText: { type: "string", description: "Replacement text" },
+            pageObjectIds: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional array of slide IDs to limit search scope"
+            }
+          },
+          required: ["presentationId", "containsText", "replaceText"]
+        }
+      },
+      {
+        name: "slides_createParagraphBullets",
+        description: "Add bullets to paragraphs. Maps directly to CreateParagraphBulletsRequest in presentations.batchUpdate. Returns batchUpdate response.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            objectId: { type: "string", description: "ID of the shape or table containing the text" },
+            textRange: {
+              type: "object",
+              description: "Optional text range. If omitted, applies to all text.",
+              properties: {
+                startIndex: { type: "number", description: "Start index (0-based, inclusive)" },
+                endIndex: { type: "number", description: "End index (0-based, exclusive)" },
+                type: { type: "string", enum: ["FIXED_RANGE", "FROM_START_INDEX", "ALL"], description: "Range type" }
+              }
+            },
+            bulletPreset: {
+              type: "string",
+              enum: [
+                "BULLET_DISC_CIRCLE_SQUARE",
+                "BULLET_DIAMONDX_ARROW3D_SQUARE",
+                "BULLET_CHECKBOX",
+                "BULLET_ARROW_DIAMOND_DISC",
+                "BULLET_STAR_CIRCLE_SQUARE",
+                "BULLET_ARROW3D_CIRCLE_SQUARE",
+                "BULLET_LEFTTRIANGLE_DIAMOND_DISC",
+                "BULLET_DIAMONDX_HOLLOWDIAMOND_SQUARE",
+                "BULLET_DIAMOND_CIRCLE_SQUARE",
+                "NUMBERED_DIGIT_ALPHA_ROMAN",
+                "NUMBERED_DIGIT_ALPHA_ROMAN_PARENS",
+                "NUMBERED_DIGIT_NESTED",
+                "NUMBERED_UPPERALPHA_ALPHA_ROMAN",
+                "NUMBERED_UPPERROMAN_UPPERALPHA_DIGIT",
+                "NUMBERED_ZERODECIMAL_ALPHA_ROMAN"
+              ],
+              description: "Optional bullet style preset"
+            },
+            cellLocation: {
+              type: "object",
+              description: "Optional table cell location. Required if objectId is a table.",
+              properties: {
+                rowIndex: { type: "number", description: "Row index (0-based)" },
+                columnIndex: { type: "number", description: "Column index (0-based)" }
+              },
+              required: ["rowIndex", "columnIndex"]
+            }
+          },
+          required: ["presentationId", "objectId"]
+        }
+      },
+      {
+        name: "slides_updatePageElementTransform",
+        description: "Move, scale, rotate, or skew a page element. Maps directly to UpdatePageElementTransformRequest in presentations.batchUpdate. Returns batchUpdate response.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            objectId: { type: "string", description: "ID of the page element to transform" },
+            transform: {
+              type: "object",
+              description: "Transformation matrix parameters",
+              properties: {
+                scaleX: { type: "number", description: "Horizontal scale factor" },
+                scaleY: { type: "number", description: "Vertical scale factor" },
+                shearX: { type: "number", description: "Horizontal shear factor" },
+                shearY: { type: "number", description: "Vertical shear factor" },
+                translateX: { type: "number", description: "Horizontal translation" },
+                translateY: { type: "number", description: "Vertical translation" },
+                unit: { type: "string", enum: ["EMU", "PT"], description: "Unit for translation (EMU or PT)" }
+              }
+            },
+            applyMode: {
+              type: "string",
+              enum: ["RELATIVE", "ABSOLUTE"],
+              description: "Whether to apply transform relative to current state or absolute"
+            }
+          },
+          required: ["presentationId", "objectId", "transform"]
         }
       },
       {
@@ -8359,6 +8600,286 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           };
         } catch (error: any) {
           return errorResponse(error.message || 'Failed to duplicate object');
+        }
+      }
+
+      case "slides_insertText": {
+        const validation = SlidesInsertTextSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          // Build insertText request
+          const insertTextRequest: any = {
+            objectId: args.objectId,
+            text: args.text
+          };
+
+          if (args.insertionIndex !== undefined) {
+            insertTextRequest.insertionIndex = args.insertionIndex;
+          }
+
+          if (args.cellLocation) {
+            insertTextRequest.cellLocation = {
+              rowIndex: args.cellLocation.rowIndex,
+              columnIndex: args.cellLocation.columnIndex
+            };
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                insertText: insertTextRequest
+              }]
+            }
+          });
+
+          // Return raw API response as JSON
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to insert text');
+        }
+      }
+
+      case "slides_deleteText": {
+        const validation = SlidesDeleteTextSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          // Build deleteText request
+          const deleteTextRequest: any = {
+            objectId: args.objectId
+          };
+
+          if (args.textRange) {
+            deleteTextRequest.textRange = {};
+            if (args.textRange.startIndex !== undefined) {
+              deleteTextRequest.textRange.startIndex = args.textRange.startIndex;
+            }
+            if (args.textRange.endIndex !== undefined) {
+              deleteTextRequest.textRange.endIndex = args.textRange.endIndex;
+            }
+            if (args.textRange.type) {
+              deleteTextRequest.textRange.type = args.textRange.type;
+            }
+          }
+
+          if (args.cellLocation) {
+            deleteTextRequest.cellLocation = {
+              rowIndex: args.cellLocation.rowIndex,
+              columnIndex: args.cellLocation.columnIndex
+            };
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                deleteText: deleteTextRequest
+              }]
+            }
+          });
+
+          // Return raw API response as JSON
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to delete text');
+        }
+      }
+
+      case "slides_replaceAllText": {
+        const validation = SlidesReplaceAllTextSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          // Build replaceAllText request
+          const replaceAllTextRequest: any = {
+            containsText: {
+              text: args.containsText.text
+            },
+            replaceText: args.replaceText
+          };
+
+          if (args.containsText.matchCase !== undefined) {
+            replaceAllTextRequest.containsText.matchCase = args.containsText.matchCase;
+          }
+
+          if (args.pageObjectIds) {
+            replaceAllTextRequest.pageObjectIds = args.pageObjectIds;
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                replaceAllText: replaceAllTextRequest
+              }]
+            }
+          });
+
+          // Return raw API response as JSON
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to replace text');
+        }
+      }
+
+      case "slides_createParagraphBullets": {
+        const validation = SlidesCreateParagraphBulletsSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          // Build createParagraphBullets request
+          const createParagraphBulletsRequest: any = {
+            objectId: args.objectId
+          };
+
+          if (args.textRange) {
+            createParagraphBulletsRequest.textRange = {};
+            if (args.textRange.startIndex !== undefined) {
+              createParagraphBulletsRequest.textRange.startIndex = args.textRange.startIndex;
+            }
+            if (args.textRange.endIndex !== undefined) {
+              createParagraphBulletsRequest.textRange.endIndex = args.textRange.endIndex;
+            }
+            if (args.textRange.type) {
+              createParagraphBulletsRequest.textRange.type = args.textRange.type;
+            }
+          }
+
+          if (args.bulletPreset) {
+            createParagraphBulletsRequest.bulletPreset = args.bulletPreset;
+          }
+
+          if (args.cellLocation) {
+            createParagraphBulletsRequest.cellLocation = {
+              rowIndex: args.cellLocation.rowIndex,
+              columnIndex: args.cellLocation.columnIndex
+            };
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                createParagraphBullets: createParagraphBulletsRequest
+              }]
+            }
+          });
+
+          // Return raw API response as JSON
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to create paragraph bullets');
+        }
+      }
+
+      case "slides_updatePageElementTransform": {
+        const validation = SlidesUpdatePageElementTransformSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          // Build updatePageElementTransform request
+          const updatePageElementTransformRequest: any = {
+            objectId: args.objectId,
+            transform: {}
+          };
+
+          // Add transform properties if provided
+          if (args.transform.scaleX !== undefined) {
+            updatePageElementTransformRequest.transform.scaleX = args.transform.scaleX;
+          }
+          if (args.transform.scaleY !== undefined) {
+            updatePageElementTransformRequest.transform.scaleY = args.transform.scaleY;
+          }
+          if (args.transform.shearX !== undefined) {
+            updatePageElementTransformRequest.transform.shearX = args.transform.shearX;
+          }
+          if (args.transform.shearY !== undefined) {
+            updatePageElementTransformRequest.transform.shearY = args.transform.shearY;
+          }
+          if (args.transform.translateX !== undefined) {
+            updatePageElementTransformRequest.transform.translateX = args.transform.translateX;
+          }
+          if (args.transform.translateY !== undefined) {
+            updatePageElementTransformRequest.transform.translateY = args.transform.translateY;
+          }
+          if (args.transform.unit) {
+            updatePageElementTransformRequest.transform.unit = args.transform.unit;
+          }
+
+          if (args.applyMode) {
+            updatePageElementTransformRequest.applyMode = args.applyMode;
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                updatePageElementTransform: updatePageElementTransformRequest
+              }]
+            }
+          });
+
+          // Return raw API response as JSON
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to update page element transform');
         }
       }
 

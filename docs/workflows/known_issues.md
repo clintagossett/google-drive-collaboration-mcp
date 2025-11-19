@@ -6,10 +6,12 @@ This document tracks known bugs, limitations, and workarounds for the Google Dri
 
 ## CRITICAL: Index Offset Bug with Table of Contents
 
-**Status**: Confirmed Bug
+**Status**: ✅ ROOT CAUSE IDENTIFIED - Fix Ready to Implement
 **Severity**: High - Makes formatting unusable in documents with TOC
 **Discovered**: 2025-11-18
+**Root Cause Found**: 2025-11-18
 **Affects**: `formatGoogleDocText`, `formatGoogleDocParagraph`, and all write operations
+**Actual Bug Location**: `getGoogleDocContent` (uses custom indices instead of API indices)
 
 ### Problem Description
 
@@ -19,17 +21,50 @@ When a Google Docs document contains a Table of Contents (TOC), there is a **~12
 
 This causes all formatting attempts to hit the wrong text location.
 
-### Root Cause Analysis
+### Root Cause Analysis (CONFIRMED)
 
-According to Google Docs API documentation:
-> "The 'personalizing' types for structural elements—`SectionBreak`, `TableOfContents`, `Table`, and `Paragraph`—don't have these indexes because their enclosing `StructuralElement` has these fields."
+**Investigation Date**: 2025-11-18
+**See**: `docs/workflows/TOC_BUG_INVESTIGATION.md` for complete analysis
 
-**What this means**: Table of Contents elements should NOT have index properties and should be excluded from position counting.
+**The Real Problem**:
+There are TWO different index systems in use:
 
-**What's happening**:
-- `getGoogleDocContent` correctly excludes TOC from indices (matches API spec)
-- `formatGoogleDocText` and `formatGoogleDocParagraph` incorrectly include TOC in indices
-- This creates a mismatch where read index 100 ≠ write index 100
+1. **Custom Manual Indices** (used by `getGoogleDocContent`):
+   - Manually calculated by iterating and counting text
+   - Starts at 1, increments manually
+   - Only includes paragraph text, excludes TOC/tables/section breaks
+   - Example: "TESTMARKER" at custom index 62
+
+2. **Google API Absolute Indices** (used by write operations):
+   - Official Google Docs document indices from API
+   - Includes ALL content (TOC, tables, everything)
+   - Example: "TESTMARKER" at API index 1297
+
+**Code Analysis**:
+```typescript
+// src/index.ts:5738-5758 - THE BUG
+let currentIndex = 1;  // ← Manual counting (WRONG)
+for (const element of document.data.body.content) {
+  if (element.paragraph?.elements) {  // ← Only paragraphs, skips TOC
+    for (const textElement of element.paragraph.elements) {
+      if (textElement.textRun?.content) {
+        segments.push({
+          startIndex: currentIndex,  // ← WRONG: Should use element.startIndex
+          endIndex: currentIndex + text.length
+        });
+        currentIndex += text.length;  // ← Manual increment
+      }
+    }
+  }
+}
+```
+
+**What should happen**: Use `element.startIndex` and `element.endIndex` from the API
+**What actually happens**: Manually count and skip non-paragraph elements
+
+**Original hypothesis was BACKWARDS**:
+- ❌ We thought: "getGoogleDocContent excludes TOC (correct), write operations include it (wrong)"
+- ✅ Reality: "getGoogleDocContent uses custom indices (wrong), write operations use API indices (correct)"
 
 ### How to Reproduce
 
@@ -136,25 +171,76 @@ writeIndex = readIndex + TOC_SIZE_IN_CHARACTERS
 4. Measure TOC character count manually or programmatically
 5. Use that as offset for all write operations
 
-### Recommended Fix
+### The Fix (IDENTIFIED)
 
-The bug is in the MCP server implementation. The write tools need to be updated to use the same index system as read tools.
+**Fix Location**: `src/index.ts` lines 5738-5758 (`getGoogleDocContent` handler)
 
-**For MCP server developers**:
+**Current Code (WRONG)**:
+```typescript
+let currentIndex = 1;
+const segments: Array<{text: string, startIndex: number, endIndex: number}> = [];
 
-1. **Check implementation** of `formatGoogleDocText` and `formatGoogleDocParagraph`
-2. **Ensure they use** `documents.get` with the same parameters as `getGoogleDocContent`
-3. **Verify index calculation** excludes TOC elements (as per Google API spec)
-4. **Look for** any manual offset adjustments that might be adding TOC length
-
-**Likely issue location** (hypothetical - needs verification):
-```javascript
-// WRONG: Including TOC in index calculation
-const startIndex = userProvidedIndex;
-
-// RIGHT: Should match getGoogleDocContent behavior
-const startIndex = userProvidedIndex; // already excludes TOC
+if (document.data.body?.content) {
+  for (const element of document.data.body.content) {
+    if (element.paragraph?.elements) {
+      for (const textElement of element.paragraph.elements) {
+        if (textElement.textRun?.content) {
+          const text = textElement.textRun.content;
+          segments.push({
+            text,
+            startIndex: currentIndex,  // ← WRONG: manual counting
+            endIndex: currentIndex + text.length
+          });
+          content += text;
+          currentIndex += text.length;  // ← WRONG: manual increment
+        }
+      }
+    }
+  }
+}
 ```
+
+**Fixed Code (CORRECT)**:
+```typescript
+const segments: Array<{text: string, startIndex: number, endIndex: number}> = [];
+
+if (document.data.body?.content) {
+  for (const element of document.data.body.content) {
+    // Process all elements that have indices, not just paragraphs
+    if (element.paragraph?.elements) {
+      for (const textElement of element.paragraph.elements) {
+        if (textElement.textRun?.content &&
+            textElement.startIndex !== undefined &&
+            textElement.endIndex !== undefined) {
+          segments.push({
+            text: textElement.textRun.content,
+            startIndex: textElement.startIndex,  // ✅ RIGHT: use API index
+            endIndex: textElement.endIndex        // ✅ RIGHT: use API index
+          });
+          content += textElement.textRun.content;
+        }
+      }
+    }
+  }
+}
+```
+
+**Key Changes**:
+1. ✅ Remove manual index counting (`let currentIndex = 1`)
+2. ✅ Use `textElement.startIndex` from API (not manual counting)
+3. ✅ Use `textElement.endIndex` from API (not calculated length)
+4. ✅ Add safety checks for `undefined` indices
+
+**Benefits**:
+- ✅ Read and write indices will match
+- ✅ Works with TOC, tables, all elements
+- ✅ No offset calculations needed
+- ✅ Follows Google API conventions
+
+**Breaking Change Warning**:
+- ⚠️ Indices will change for documents with TOC/tables
+- ⚠️ Users with saved indices will need to re-read documents
+- ⚠️ Documents without TOC: No impact (indices stay the same)
 
 ### Workaround for AI Agents
 

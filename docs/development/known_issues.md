@@ -6,12 +6,13 @@ This document tracks known bugs, limitations, and workarounds for the Google Dri
 
 ## CRITICAL: Index Offset Bug with Table of Contents
 
-**Status**: ✅ ROOT CAUSE IDENTIFIED - Fix Ready to Implement
+**Status**: ✅ FIXED in v2.0.0 (2025-11-18)
 **Severity**: High - Makes formatting unusable in documents with TOC
 **Discovered**: 2025-11-18
 **Root Cause Found**: 2025-11-18
+**Fixed**: 2025-11-18
 **Affects**: `formatGoogleDocText`, `formatGoogleDocParagraph`, and all write operations
-**Actual Bug Location**: `getGoogleDocContent` (uses custom indices instead of API indices)
+**Actual Bug Location**: `getGoogleDocContent` (was using custom indices instead of API indices)
 
 ### Problem Description
 

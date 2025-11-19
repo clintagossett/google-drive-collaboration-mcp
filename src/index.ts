@@ -5733,25 +5733,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         const docs = google.docs({ version: 'v1', auth: authClient });
         const document = await docs.documents.get({ documentId: args.documentId });
-        
+
         let content = '';
-        let currentIndex = 1;
         const segments: Array<{text: string, startIndex: number, endIndex: number}> = [];
-        
-        // Extract text content with indices
+
+        // Extract text content with indices from API
         if (document.data.body?.content) {
           for (const element of document.data.body.content) {
             if (element.paragraph?.elements) {
               for (const textElement of element.paragraph.elements) {
-                if (textElement.textRun?.content) {
-                  const text = textElement.textRun.content;
+                if (textElement.textRun?.content &&
+                    textElement.startIndex !== undefined &&
+                    textElement.endIndex !== undefined) {
                   segments.push({
-                    text,
-                    startIndex: currentIndex,
-                    endIndex: currentIndex + text.length
+                    text: textElement.textRun.content,
+                    startIndex: textElement.startIndex,
+                    endIndex: textElement.endIndex
                   });
-                  content += text;
-                  currentIndex += text.length;
+                  content += textElement.textRun.content;
                 }
               }
             }
@@ -5760,22 +5759,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         
         // Format the response to show text with indices
         let formattedContent = 'Document content with indices:\n\n';
-        let lineStart = 1;
-        const lines = content.split('\n');
-        
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          const lineEnd = lineStart + line.length;
-          if (line.trim()) {
-            formattedContent += `[${lineStart}-${lineEnd}] ${line}\n`;
-          }
-          lineStart = lineEnd + 1; // +1 for the newline character
+
+        // Display each segment with its actual API indices
+        for (const segment of segments) {
+          const text = segment.text.replace(/\n/g, '\\n');
+          formattedContent += `[${segment.startIndex}-${segment.endIndex}] ${text}\n`;
         }
-        
+
         return {
           content: [{
             type: "text",
-            text: formattedContent + `\nTotal length: ${content.length} characters`
+            text: formattedContent + `\nTotal segments: ${segments.length}`
           }],
           isError: false
         };

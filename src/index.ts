@@ -486,6 +486,23 @@ const DriveDeletePermissionSchema = z.object({
   supportsAllDrives: z.boolean().optional()
 });
 
+// Authentication & Diagnostic Tools - Help users troubleshoot auth and permission issues
+
+// Maps to about.get in Google Drive API v3
+const AuthGetStatusSchema = z.object({
+  fields: z.string().optional() // Default: 'user,storageQuota'
+});
+
+// Maps to files.get in Google Drive API v3 with enhanced error handling
+const AuthTestFileAccessSchema = z.object({
+  fileId: z.string().min(1, "File ID is required"),
+  fields: z.string().optional() // Default: 'id,name,mimeType,capabilities,permissions'
+});
+
+// Shows granted OAuth scopes from current token
+const AuthListScopesSchema = z.object({
+  // No parameters needed - reads from current auth token
+});
 
 // Comprehensive RepeatCellRequest schema - replaces formatGoogleSheetCells, formatGoogleSheetText, formatGoogleSheetNumbers
 const SheetsRepeatCellSchema = z.object({
@@ -2563,6 +2580,36 @@ Google Slides:
             supportsAllDrives: { type: "boolean", description: "Include shared drives", optional: true }
           },
           required: ["fileId", "permissionId"]
+        }
+      },
+      {
+        name: "auth_getStatus",
+        description: "Check authentication status and show current user info. Maps to about.get in Drive API v3. Returns authenticated user details and storage quota.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fields: { type: "string", description: "Optional fields to include (default: 'user,storageQuota')", optional: true }
+          }
+        }
+      },
+      {
+        name: "auth_testFileAccess",
+        description: "Test if you can access a specific file/folder and show what permissions you have. Maps to files.get in Drive API v3 with enhanced error handling.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            fileId: { type: "string", description: "File or folder ID to test access" },
+            fields: { type: "string", description: "Optional fields (default: 'id,name,mimeType,capabilities,permissions')", optional: true }
+          },
+          required: ["fileId"]
+        }
+      },
+      {
+        name: "auth_listScopes",
+        description: "Show granted OAuth scopes and token information. Helps diagnose scope-related permission issues.",
+        inputSchema: {
+          type: "object",
+          properties: {}
         }
       },
       {
@@ -5789,6 +5836,129 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      case "auth_getStatus": {
+        const validation = AuthGetStatusSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        const fields = args.fields || 'user,storageQuota';
+        const response = await drive.about.get({ fields });
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              authenticated: true,
+              user: response.data.user,
+              storageQuota: response.data.storageQuota
+            }, null, 2)
+          }],
+          isError: false
+        };
+      }
+
+      case "auth_testFileAccess": {
+        const validation = AuthTestFileAccessSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const fields = args.fields || 'id,name,mimeType,capabilities,permissions,owners';
+          const response = await drive.files.get({
+            fileId: args.fileId,
+            fields,
+            supportsAllDrives: true
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify({
+                accessible: true,
+                file: {
+                  id: response.data.id,
+                  name: response.data.name,
+                  mimeType: response.data.mimeType
+                },
+                capabilities: response.data.capabilities,
+                yourPermission: response.data.permissions ? response.data.permissions[0] : null,
+                owners: response.data.owners
+              }, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          const errorCode = error.code || error.response?.status || 500;
+          const errorMessage = error.message || 'Unknown error';
+
+          // Provide helpful suggestions based on error type
+          const suggestions: string[] = [];
+          if (errorCode === 404) {
+            suggestions.push("Verify the file ID is correct");
+            suggestions.push("Check if the file has been deleted or moved to trash");
+            suggestions.push(`Ask the owner to share the file with your account`);
+          } else if (errorCode === 403) {
+            suggestions.push("You don't have permission to access this file");
+            suggestions.push(`Ask the owner to share the file with your account`);
+            suggestions.push("Use auth_getStatus to verify which account you're using");
+          } else if (errorCode === 401) {
+            suggestions.push("Your authentication token may have expired");
+            suggestions.push("Try re-authenticating with: npm run auth");
+          }
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify({
+                accessible: false,
+                error: errorMessage,
+                errorCode,
+                suggestions
+              }, null, 2)
+            }],
+            isError: false  // Return as success with error details for better UX
+          };
+        }
+      }
+
+      case "auth_listScopes": {
+        const validation = AuthListScopesSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+
+        // Get scopes from the OAuth2 client credentials
+        const credentials = authClient.credentials;
+        const scopes = credentials.scope?.split(' ') || [];
+
+        const scopeDescriptions: Record<string, string> = {
+          'https://www.googleapis.com/auth/drive': 'Full access to Google Drive',
+          'https://www.googleapis.com/auth/drive.file': 'Access to files created or opened by this app',
+          'https://www.googleapis.com/auth/drive.readonly': 'Read-only access to Google Drive',
+          'https://www.googleapis.com/auth/documents': 'Access to Google Docs',
+          'https://www.googleapis.com/auth/spreadsheets': 'Access to Google Sheets',
+          'https://www.googleapis.com/auth/presentations': 'Access to Google Slides'
+        };
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              scopes,
+              scopeDescriptions: Object.fromEntries(
+                scopes.map(scope => [scope, scopeDescriptions[scope] || 'Unknown scope'])
+              ),
+              tokenExpiry: credentials.expiry_date ? new Date(credentials.expiry_date).toISOString() : null,
+              hasRefreshToken: !!credentials.refresh_token
+            }, null, 2)
+          }],
+          isError: false
+        };
+      }
 
       case "sheets_repeatCell": {
         const validation = SheetsRepeatCellSchema.safeParse(request.params.arguments);

@@ -611,6 +611,71 @@ After revoking access, you'll need to re-authenticate the next time you use the 
 
 ## Troubleshooting
 
+### Authentication & Permission Diagnostic Tools
+
+The MCP server includes built-in diagnostic tools to help you troubleshoot authentication and permission issues:
+
+#### `auth_getStatus` - Check Authentication Status
+
+Verify you're authenticated and see which Google account you're using:
+
+```
+Use the auth_getStatus tool
+```
+
+**Returns:**
+- Current authenticated user (email, display name)
+- Storage quota information
+- Confirms authentication is working
+
+**Use when:**
+- Unsure which Google account is authenticated
+- Verifying authentication is working before accessing files
+- Checking storage quota
+
+#### `auth_testFileAccess` - Test File/Folder Access
+
+Test if you can access a specific file or folder and see what permissions you have:
+
+```
+Use auth_testFileAccess with fileId: "YOUR_FILE_ID"
+```
+
+**Returns (on success):**
+- File information (name, type)
+- Your capabilities (canEdit, canComment, canShare, canCopy, etc.)
+- Permission role (owner, writer, reader, etc.)
+- File owner information
+
+**Returns (on failure):**
+- Error message explaining why access failed
+- Actionable suggestions to fix the issue
+- Error code (404, 403, 401, etc.)
+
+**Use when:**
+- Getting "File not found" or "Permission denied" errors
+- Unsure if you have access to a specific file
+- Need to know what actions you can perform on a file
+
+#### `auth_listScopes` - Show Granted OAuth Scopes
+
+Display what OAuth scopes your current token has:
+
+```
+Use the auth_listScopes tool
+```
+
+**Returns:**
+- List of granted OAuth scopes
+- Description of what each scope allows
+- Token expiry time
+- Whether a refresh token exists
+
+**Use when:**
+- Getting "Insufficient permissions" errors
+- Verifying you have the required scopes
+- Debugging scope-related issues
+
 ### Common Issues and Solutions
 
 #### "OAuth credentials not found"

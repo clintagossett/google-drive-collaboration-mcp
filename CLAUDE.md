@@ -48,8 +48,10 @@ This is a fork of [@piotr-agier/google-drive-mcp](https://github.com/piotr-agier
 
 - **License**: MIT (permits modification and redistribution)
 - **Original Author**: Piotr Agier
-- **Extended By**: Applied Frameworks
-- **New Package Name**: `@appliedframeworks/google-drive-mcp` (to be published)
+- **Extended By**: Clint Gossett
+- **Package Name**: `@clintagossett/google-drive-collaboration-mcp`
+- **MCP Server Name**: `google-drive-collaboration-mcp`
+- **Repository**: https://github.com/clintagossett/google-drive-mcp
 
 ## OAuth Credentials Location
 

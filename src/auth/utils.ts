@@ -21,10 +21,10 @@ export function getSecureTokenPath(): string {
   }
 
   // Use XDG Base Directory spec or fallback to ~/.config
-  const configHome = process.env.XDG_CONFIG_HOME || 
+  const configHome = process.env.XDG_CONFIG_HOME ||
     path.join(os.homedir(), '.config');
-  
-  const tokenDir = path.join(configHome, 'google-drive-mcp');
+
+  const tokenDir = path.join(configHome, 'google-drive-collaboration-mcp');
   return path.join(tokenDir, 'tokens.json');
 }
 

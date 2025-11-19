@@ -1941,7 +1941,7 @@ const DocsReplaceImageSchema = z.object({
 // -----------------------------------------------------------------------------
 const server = new Server(
   {
-    name: "google-drive-mcp",
+    name: "google-drive-collaboration-mcp",
     version: VERSION,
   },
   {

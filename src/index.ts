@@ -1396,6 +1396,66 @@ const SlidesUpdateVideoPropertiesSchema = z.object({
   }).optional()
 });
 
+// Phase 3 Zod Schemas (Issue #7 - Text & Line Formatting)
+const SlidesDeleteParagraphBulletsSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  objectId: z.string().min(1, "Object ID is required"),
+  textRange: z.object({
+    type: z.enum(['FIXED_RANGE', 'FROM_START_INDEX', 'ALL']).optional(),
+    startIndex: z.number().min(0).optional(),
+    endIndex: z.number().min(0).optional()
+  }).optional(),
+  cellLocation: z.object({
+    rowIndex: z.number().min(0),
+    columnIndex: z.number().min(0)
+  }).optional()
+});
+
+const SlidesUpdateLinePropertiesSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  objectId: z.string().min(1, "Object ID is required"),
+  lineProperties: z.object({
+    weight: z.object({
+      magnitude: z.number().min(0),
+      unit: z.enum(['EMU', 'PT'])
+    }).optional(),
+    dashStyle: z.enum(['SOLID', 'DOT', 'DASH', 'DASH_DOT', 'LONG_DASH', 'LONG_DASH_DOT']).optional(),
+    startArrow: z.enum([
+      'ARROW_NONE', 'ARROW', 'STEALTH_ARROW', 'FILL_ARROW', 'FILL_CIRCLE', 'FILL_SQUARE', 'FILL_DIAMOND', 'OPEN_ARROW', 'OPEN_CIRCLE', 'OPEN_SQUARE', 'OPEN_DIAMOND'
+    ]).optional(),
+    endArrow: z.enum([
+      'ARROW_NONE', 'ARROW', 'STEALTH_ARROW', 'FILL_ARROW', 'FILL_CIRCLE', 'FILL_SQUARE', 'FILL_DIAMOND', 'OPEN_ARROW', 'OPEN_CIRCLE', 'OPEN_SQUARE', 'OPEN_DIAMOND'
+    ]).optional(),
+    lineFill: z.object({
+      solidFill: z.object({
+        color: z.object({
+          red: z.number().min(0).max(1).optional(),
+          green: z.number().min(0).max(1).optional(),
+          blue: z.number().min(0).max(1).optional()
+        }),
+        alpha: z.number().min(0).max(1).optional()
+      }).optional()
+    }).optional(),
+    link: z.object({
+      url: z.string().url().optional(),
+      relativeLink: z.enum(['NEXT_SLIDE', 'PREVIOUS_SLIDE', 'FIRST_SLIDE', 'LAST_SLIDE']).optional(),
+      slideIndex: z.number().min(0).optional(),
+      pageObjectId: z.string().optional()
+    }).optional()
+  }).optional()
+});
+
+const SlidesUpdateLineCategorySchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  objectId: z.string().min(1, "Object ID is required"),
+  lineCategory: z.enum(['STRAIGHT', 'BENT', 'CURVED'])
+});
+
+const SlidesRerouteLineSchema = z.object({
+  presentationId: z.string().min(1, "Presentation ID is required"),
+  objectId: z.string().min(1, "Object ID is required")
+});
+
 // Phase 1 Google Docs API Tools
 const DocsDeleteContentRangeSchema = z.object({
   documentId: z.string().min(1, "Document ID is required"),
@@ -4292,6 +4352,85 @@ Google Slides:
                 mute: { type: "boolean", description: "Mute audio" }
               }
             }
+          },
+          required: ["presentationId", "objectId"]
+        }
+      },
+      {
+        name: "slides_deleteParagraphBullets",
+        description: "Remove bullets from paragraphs. Maps directly to DeleteParagraphBulletsRequest in presentations.batchUpdate.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            objectId: { type: "string", description: "Shape or table object ID" },
+            textRange: {
+              type: "object",
+              description: "Optional text range (defaults to all text)",
+              properties: {
+                type: { type: "string", enum: ["FIXED_RANGE", "FROM_START_INDEX", "ALL"], description: "Range type" },
+                startIndex: { type: "number", minimum: 0, description: "Start index (0-based)" },
+                endIndex: { type: "number", minimum: 0, description: "End index (0-based)" }
+              }
+            },
+            cellLocation: {
+              type: "object",
+              description: "Optional table cell location",
+              properties: {
+                rowIndex: { type: "number", minimum: 0, description: "Row index (0-based)" },
+                columnIndex: { type: "number", minimum: 0, description: "Column index (0-based)" }
+              },
+              required: ["rowIndex", "columnIndex"]
+            }
+          },
+          required: ["presentationId", "objectId"]
+        }
+      },
+      {
+        name: "slides_updateLineProperties",
+        description: "Update line styling (weight, dash style, arrows, color). Maps directly to UpdateLinePropertiesRequest in presentations.batchUpdate.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            objectId: { type: "string", description: "Line object ID" },
+            lineProperties: {
+              type: "object",
+              description: "Line properties to update",
+              properties: {
+                weight: { type: "object", description: "Line weight" },
+                dashStyle: { type: "string", enum: ["SOLID", "DOT", "DASH", "DASH_DOT", "LONG_DASH", "LONG_DASH_DOT"], description: "Dash style" },
+                startArrow: { type: "string", description: "Start arrow style" },
+                endArrow: { type: "string", description: "End arrow style" },
+                lineFill: { type: "object", description: "Line fill color" },
+                link: { type: "object", description: "Optional hyperlink" }
+              }
+            }
+          },
+          required: ["presentationId", "objectId"]
+        }
+      },
+      {
+        name: "slides_updateLineCategory",
+        description: "Change line category (straight, bent, curved). Maps directly to UpdateLineCategoryRequest in presentations.batchUpdate.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            objectId: { type: "string", description: "Line object ID" },
+            lineCategory: { type: "string", enum: ["STRAIGHT", "BENT", "CURVED"], description: "New line category" }
+          },
+          required: ["presentationId", "objectId", "lineCategory"]
+        }
+      },
+      {
+        name: "slides_rerouteLine",
+        description: "Reroute a connector line between shapes. Maps directly to RerouteLineRequest in presentations.batchUpdate.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            presentationId: { type: "string", description: "Presentation ID" },
+            objectId: { type: "string", description: "Line object ID to reroute" }
           },
           required: ["presentationId", "objectId"]
         }
@@ -9639,6 +9778,156 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           };
         } catch (error: any) {
           return errorResponse(error.message || 'Failed to update video properties');
+        }
+      }
+
+      case "slides_deleteParagraphBullets": {
+        const validation = SlidesDeleteParagraphBulletsSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const deleteParagraphBulletsRequest: any = {
+            objectId: args.objectId
+          };
+
+          if (args.textRange) {
+            deleteParagraphBulletsRequest.textRange = args.textRange;
+          }
+
+          if (args.cellLocation) {
+            deleteParagraphBulletsRequest.cellLocation = args.cellLocation;
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                deleteParagraphBullets: deleteParagraphBulletsRequest
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to delete paragraph bullets');
+        }
+      }
+
+      case "slides_updateLineProperties": {
+        const validation = SlidesUpdateLinePropertiesSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const updateLinePropertiesRequest: any = {
+            objectId: args.objectId
+          };
+
+          if (args.lineProperties) {
+            updateLinePropertiesRequest.lineProperties = args.lineProperties;
+            updateLinePropertiesRequest.fields = Object.keys(args.lineProperties).map(k => `lineProperties.${k}`).join(',');
+          }
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                updateLineProperties: updateLinePropertiesRequest
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to update line properties');
+        }
+      }
+
+      case "slides_updateLineCategory": {
+        const validation = SlidesUpdateLineCategorySchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                updateLineCategory: {
+                  objectId: args.objectId,
+                  lineCategory: args.lineCategory
+                }
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to update line category');
+        }
+      }
+
+      case "slides_rerouteLine": {
+        const validation = SlidesRerouteLineSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const slidesService = google.slides({ version: 'v1', auth: authClient });
+
+          const response = await slidesService.presentations.batchUpdate({
+            presentationId: args.presentationId,
+            requestBody: {
+              requests: [{
+                rerouteLine: {
+                  objectId: args.objectId
+                }
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to reroute line');
         }
       }
 

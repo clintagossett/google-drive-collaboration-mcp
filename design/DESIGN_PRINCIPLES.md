@@ -8,6 +8,24 @@ This document serves as the **master reference** for all implementation decision
 
 ---
 
+## ⚠️ CRITICAL REMINDER: TESTS ARE PART OF IMPLEMENTATION
+
+**A tool is NOT complete until:**
+1. ✅ Code is written (schema + definition + handler)
+2. ✅ Tests are written (5+ unit tests per tool)
+3. ✅ Tests pass (`npm test`)
+
+**Build success ≠ Implementation complete**
+
+If you find yourself thinking "I'll write tests later" or "Tests can wait until the end of the phase":
+- 🛑 **STOP**
+- 📖 Re-read "Common Mistakes to Avoid - Mistake #1" below
+- 🔄 Write the tests NOW, before moving to the next tool
+
+**Lesson from Phase 1 (2025-01-18)**: Implemented 10 tools without tests, had to write 91 tests retroactively. Never again.
+
+---
+
 ## Table of Contents
 
 1. [Core Philosophy](#core-philosophy)
@@ -525,20 +543,24 @@ Use this checklist when implementing a new tool:
 - [ ] Read `design/PHASE_1_PLAN.md` (or current phase) for implementation workflow
 - [ ] Read this document (`DESIGN_PRINCIPLES.md`) for rules
 
-### During Implementation
+### During Implementation (PER TOOL, NOT PER PHASE)
 - [ ] Follow 3-step pattern: Schema → Definition → Handler
 - [ ] Place code in correct file locations (by line number)
 - [ ] Use standard error handling (try/catch with errorResponse)
 - [ ] Follow naming conventions exactly
 - [ ] Write clear, helpful error messages
+- [ ] **IMMEDIATELY** write tests for this tool (see Testing section below)
+- [ ] Run `npm test` to verify this tool's tests pass
+- [ ] **DO NOT** proceed to next tool until tests pass
 
-### Testing
+### Testing (MUST BE DONE PER TOOL, NOT AT END OF PHASE)
 - [ ] Write 5+ unit tests (validation, API call, errors, response format)
 - [ ] Write 3+ integration tests (OAuth doc, public doc, errors)
-- [ ] Run `npm run test:unit` - all pass
-- [ ] Run `npm run test:integration` - all pass (if enabled)
+- [ ] Run `npm run test:unit` - all pass **for this tool**
+- [ ] Run `npm run test:integration` - all pass (if enabled) **for this tool**
 - [ ] Run `npm run test:coverage` - ≥80% coverage
 - [ ] Test with MCP Inspector manually
+- [ ] **CRITICAL**: A tool is NOT complete until tests are written and passing
 
 ### Documentation
 - [ ] Update `design/docs_api_reference.md` (mark as implemented)
@@ -576,7 +598,44 @@ Refs: design/docs_api_reference.md #{tool number}
 
 ## Common Mistakes to Avoid
 
-### ❌ Mistake 1: God Object Anti-Pattern
+### ❌ Mistake 1: Writing Tests After Implementation is Complete
+```
+// WRONG WORKFLOW
+1. Implement all 10 tools
+2. Build succeeds
+3. Celebrate and write docs
+4. "Oh wait, I forgot tests!"
+```
+
+**Why This is Critical**:
+- Untested code is incomplete code
+- Build success ≠ Implementation complete
+- Bugs could exist in parameter mapping, error handling, or API requests
+- Wastes time fixing bugs in production that tests would catch
+
+**Solution**: Write tests **immediately** after each tool (or use TDD):
+```
+// CORRECT WORKFLOW (PER TOOL)
+1. Read API documentation
+2. Write Zod schema
+3. Write 5+ unit tests for schema
+4. Write tool definition
+5. Write case handler
+6. Run `npm test` - verify tests pass
+7. Mark tool as complete
+8. Move to next tool
+```
+
+**Lesson from Phase 1**:
+- Implemented 10 tools, celebrated when build succeeded
+- Forgot to write tests until asked "all tests passed?"
+- Had to write 91 tests retroactively
+- This violated the design principles and could have introduced bugs
+- **Never skip tests again**
+
+---
+
+### ❌ Mistake 2: God Object Anti-Pattern
 ```typescript
 // WRONG
 docs_editDocument({
@@ -660,15 +719,47 @@ docs_insertPageBreak()
 
 ---
 
+### ❌ Mistake 6: Todo List Structure That Encourages Skipping Tests
+```
+// WRONG TODO STRUCTURE
+1. Implement tool A
+2. Implement tool B
+3. Implement tool C
+4. Test all tools  ← Testing as separate step!
+```
+
+**Why This is Wrong**:
+- Encourages batch implementation without validation
+- Creates mental separation between "code" and "tests"
+- Violates the principle that tests are part of implementation
+
+**Solution**: Structure todos to include tests per tool:
+```
+// CORRECT TODO STRUCTURE
+1. Implement tool A (code + tests)
+2. Implement tool B (code + tests)
+3. Implement tool C (code + tests)
+```
+
+Or even better (TDD):
+```
+1. Tool A: Write tests → Write code → Verify tests pass
+2. Tool B: Write tests → Write code → Verify tests pass
+3. Tool C: Write tests → Write code → Verify tests pass
+```
+
+---
+
 ## Design Document Index
 
 **Read these documents in order for any new implementation:**
 
 1. **DESIGN_PRINCIPLES.md** (this file) - Read FIRST
-2. **API_MAPPING_STRATEGY.md** - Understand mapping pattern
-3. **docs_api_reference.md** - API details for implementation
-4. **PHASE_1_PLAN.md** (or current phase) - Step-by-step workflow
-5. **TESTING_STRATEGY.md** - Complete testing approach
+2. **LESSONS_LEARNED.md** - Learn from past mistakes (READ THIS!)
+3. **API_MAPPING_STRATEGY.md** - Understand mapping pattern
+4. **docs_api_reference.md** or **sheets_api_reference.md** - API details for implementation
+5. **PHASE_1_PLAN.md** (or current phase) - Step-by-step workflow
+6. **TESTING_STRATEGY.md** - Complete testing approach
 
 **Support Documents:**
 - `TEST_DOCUMENT_SETUP.md` - Test document configuration
@@ -690,6 +781,14 @@ If you believe a rule should change:
 ---
 
 ## Version History
+
+- **v1.1** (2025-01-18): Added critical test-first reminders
+  - Added prominent warning about tests being part of implementation
+  - Added "Mistake #1: Writing Tests After Implementation is Complete"
+  - Added "Mistake #6: Todo List Structure That Encourages Skipping Tests"
+  - Updated checklist to emphasize per-tool testing
+  - Created LESSONS_LEARNED.md to document Phase 1 mistake
+  - **Lesson**: Implemented 10 Sheets tools without tests, had to write 91 tests retroactively
 
 - **v1.0** (2025-01-18): Initial design principles
   - Established thin wrapper pattern

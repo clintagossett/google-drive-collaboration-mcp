@@ -407,6 +407,389 @@ const AddGoogleSheetConditionalFormatSchema = z.object({
   })
 });
 
+// Phase 1: Core Data Operations - Thin Layer Schemas
+const SheetsGetSpreadsheetSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  ranges: z.array(z.string()).optional(),
+  includeGridData: z.boolean().optional()
+});
+
+const SheetsCreateSpreadsheetSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  locale: z.string().optional(),
+  autoRecalc: z.enum(["ON_CHANGE", "MINUTE", "HOUR"]).optional(),
+  timeZone: z.string().optional()
+});
+
+const SheetsAppendValuesSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  range: z.string().min(1, "Range is required"),
+  values: z.array(z.array(z.string())),
+  valueInputOption: z.enum(["RAW", "USER_ENTERED"]).default("USER_ENTERED"),
+  insertDataOption: z.enum(["OVERWRITE", "INSERT_ROWS"]).optional()
+});
+
+const SheetsClearValuesSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  range: z.string().min(1, "Range is required")
+});
+
+const SheetsBatchGetValuesSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  ranges: z.array(z.string()).min(1, "At least one range is required"),
+  majorDimension: z.enum(["ROWS", "COLUMNS"]).optional(),
+  valueRenderOption: z.enum(["FORMATTED_VALUE", "UNFORMATTED_VALUE", "FORMULA"]).optional()
+});
+
+const SheetsBatchUpdateValuesSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  valueInputOption: z.enum(["RAW", "USER_ENTERED"]).default("USER_ENTERED"),
+  data: z.array(z.object({
+    range: z.string(),
+    values: z.array(z.array(z.string()))
+  })).min(1, "At least one range update is required")
+});
+
+const SheetsBatchClearValuesSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  ranges: z.array(z.string()).min(1, "At least one range is required")
+});
+
+const SheetsAddSheetSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  title: z.string().min(1, "Sheet title is required"),
+  index: z.number().int().min(0).optional(),
+  sheetType: z.enum(["GRID", "OBJECT"]).optional(),
+  gridRowCount: z.number().int().min(1).optional(),
+  gridColumnCount: z.number().int().min(1).optional(),
+  frozenRowCount: z.number().int().min(0).optional(),
+  frozenColumnCount: z.number().int().min(0).optional(),
+  hidden: z.boolean().optional(),
+  tabColorRed: z.number().min(0).max(1).optional(),
+  tabColorGreen: z.number().min(0).max(1).optional(),
+  tabColorBlue: z.number().min(0).max(1).optional(),
+  rightToLeft: z.boolean().optional()
+});
+
+const SheetsDeleteSheetSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required")
+});
+
+const SheetsUpdateSheetPropertiesSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  title: z.string().optional(),
+  index: z.number().int().min(0).optional(),
+  hidden: z.boolean().optional(),
+  tabColorRed: z.number().min(0).max(1).optional(),
+  tabColorGreen: z.number().min(0).max(1).optional(),
+  tabColorBlue: z.number().min(0).max(1).optional(),
+  frozenRowCount: z.number().int().min(0).optional(),
+  frozenColumnCount: z.number().int().min(0).optional(),
+  rightToLeft: z.boolean().optional()
+});
+
+// ========================================
+// Phase 2: Row/Column/Range Operations Schemas
+// ========================================
+
+const SheetsInsertDimensionSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  dimension: z.enum(["ROWS", "COLUMNS"], {
+    errorMap: () => ({ message: "Dimension must be ROWS or COLUMNS" })
+  }),
+  startIndex: z.number().int().min(0, "Start index must be non-negative"),
+  endIndex: z.number().int().min(0, "End index must be non-negative"),
+  inheritFromBefore: z.boolean().optional()
+}).refine(data => data.endIndex > data.startIndex, {
+  message: "End index must be greater than start index"
+});
+
+const SheetsDeleteDimensionSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  dimension: z.enum(["ROWS", "COLUMNS"], {
+    errorMap: () => ({ message: "Dimension must be ROWS or COLUMNS" })
+  }),
+  startIndex: z.number().int().min(0, "Start index must be non-negative"),
+  endIndex: z.number().int().min(0, "End index must be non-negative")
+}).refine(data => data.endIndex > data.startIndex, {
+  message: "End index must be greater than start index"
+});
+
+const SheetsMoveDimensionSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  dimension: z.enum(["ROWS", "COLUMNS"], {
+    errorMap: () => ({ message: "Dimension must be ROWS or COLUMNS" })
+  }),
+  startIndex: z.number().int().min(0, "Start index must be non-negative"),
+  endIndex: z.number().int().min(0, "End index must be non-negative"),
+  destinationIndex: z.number().int().min(0, "Destination index must be non-negative")
+}).refine(data => data.endIndex > data.startIndex, {
+  message: "End index must be greater than start index"
+});
+
+const SheetsUpdateDimensionPropertiesSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  dimension: z.enum(["ROWS", "COLUMNS"], {
+    errorMap: () => ({ message: "Dimension must be ROWS or COLUMNS" })
+  }),
+  startIndex: z.number().int().min(0, "Start index must be non-negative"),
+  endIndex: z.number().int().min(0, "End index must be non-negative"),
+  pixelSize: z.number().int().min(1, "Pixel size must be at least 1").optional(),
+  hiddenByUser: z.boolean().optional()
+}).refine(data => data.endIndex > data.startIndex, {
+  message: "End index must be greater than start index"
+}).refine(data => data.pixelSize !== undefined || data.hiddenByUser !== undefined, {
+  message: "At least one property (pixelSize or hiddenByUser) must be specified"
+});
+
+const SheetsAppendDimensionSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  dimension: z.enum(["ROWS", "COLUMNS"], {
+    errorMap: () => ({ message: "Dimension must be ROWS or COLUMNS" })
+  }),
+  length: z.number().int().min(1, "Length must be at least 1")
+});
+
+const SheetsInsertRangeSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  startRowIndex: z.number().int().min(0, "Start row index must be non-negative"),
+  endRowIndex: z.number().int().min(0, "End row index must be non-negative"),
+  startColumnIndex: z.number().int().min(0, "Start column index must be non-negative"),
+  endColumnIndex: z.number().int().min(0, "End column index must be non-negative"),
+  shiftDimension: z.enum(["ROWS", "COLUMNS"], {
+    errorMap: () => ({ message: "Shift dimension must be ROWS or COLUMNS" })
+  })
+}).refine(data => data.endRowIndex > data.startRowIndex, {
+  message: "End row index must be greater than start row index"
+}).refine(data => data.endColumnIndex > data.startColumnIndex, {
+  message: "End column index must be greater than start column index"
+});
+
+const SheetsDeleteRangeSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  startRowIndex: z.number().int().min(0, "Start row index must be non-negative"),
+  endRowIndex: z.number().int().min(0, "End row index must be non-negative"),
+  startColumnIndex: z.number().int().min(0, "Start column index must be non-negative"),
+  endColumnIndex: z.number().int().min(0, "End column index must be non-negative"),
+  shiftDimension: z.enum(["ROWS", "COLUMNS"], {
+    errorMap: () => ({ message: "Shift dimension must be ROWS or COLUMNS" })
+  })
+}).refine(data => data.endRowIndex > data.startRowIndex, {
+  message: "End row index must be greater than start row index"
+}).refine(data => data.endColumnIndex > data.startColumnIndex, {
+  message: "End column index must be greater than start column index"
+});
+
+const SheetsCopyPasteSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sourceSheetId: z.number().int().min(0, "Source sheet ID is required"),
+  sourceStartRowIndex: z.number().int().min(0, "Source start row index must be non-negative"),
+  sourceEndRowIndex: z.number().int().min(0, "Source end row index must be non-negative"),
+  sourceStartColumnIndex: z.number().int().min(0, "Source start column index must be non-negative"),
+  sourceEndColumnIndex: z.number().int().min(0, "Source end column index must be non-negative"),
+  destinationSheetId: z.number().int().min(0, "Destination sheet ID is required"),
+  destinationStartRowIndex: z.number().int().min(0, "Destination start row index must be non-negative"),
+  destinationEndRowIndex: z.number().int().min(0, "Destination end row index must be non-negative"),
+  destinationStartColumnIndex: z.number().int().min(0, "Destination start column index must be non-negative"),
+  destinationEndColumnIndex: z.number().int().min(0, "Destination end column index must be non-negative"),
+  pasteType: z.enum(["PASTE_NORMAL", "PASTE_VALUES", "PASTE_FORMAT", "PASTE_NO_BORDERS", "PASTE_FORMULA", "PASTE_DATA_VALIDATION", "PASTE_CONDITIONAL_FORMATTING"]).optional(),
+  pasteOrientation: z.enum(["NORMAL", "TRANSPOSE"]).optional()
+}).refine(data => data.sourceEndRowIndex > data.sourceStartRowIndex, {
+  message: "Source end row index must be greater than source start row index"
+}).refine(data => data.sourceEndColumnIndex > data.sourceStartColumnIndex, {
+  message: "Source end column index must be greater than source start column index"
+}).refine(data => data.destinationEndRowIndex > data.destinationStartRowIndex, {
+  message: "Destination end row index must be greater than destination start row index"
+}).refine(data => data.destinationEndColumnIndex > data.destinationStartColumnIndex, {
+  message: "Destination end column index must be greater than destination start column index"
+});
+
+const SheetsCutPasteSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sourceSheetId: z.number().int().min(0, "Source sheet ID is required"),
+  sourceStartRowIndex: z.number().int().min(0, "Source start row index must be non-negative"),
+  sourceEndRowIndex: z.number().int().min(0, "Source end row index must be non-negative"),
+  sourceStartColumnIndex: z.number().int().min(0, "Source start column index must be non-negative"),
+  sourceEndColumnIndex: z.number().int().min(0, "Source end column index must be non-negative"),
+  destinationSheetId: z.number().int().min(0, "Destination sheet ID is required"),
+  destinationRowIndex: z.number().int().min(0, "Destination row index must be non-negative"),
+  destinationColumnIndex: z.number().int().min(0, "Destination column index must be non-negative"),
+  pasteType: z.enum(["PASTE_NORMAL", "PASTE_VALUES", "PASTE_FORMAT", "PASTE_NO_BORDERS", "PASTE_FORMULA", "PASTE_DATA_VALIDATION", "PASTE_CONDITIONAL_FORMATTING"]).optional()
+}).refine(data => data.sourceEndRowIndex > data.sourceStartRowIndex, {
+  message: "Source end row index must be greater than source start row index"
+}).refine(data => data.sourceEndColumnIndex > data.sourceStartColumnIndex, {
+  message: "Source end column index must be greater than source start column index"
+});
+
+const SheetsAutoResizeDimensionsSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  dimension: z.enum(["ROWS", "COLUMNS"], {
+    errorMap: () => ({ message: "Dimension must be ROWS or COLUMNS" })
+  }),
+  startIndex: z.number().int().min(0, "Start index must be non-negative"),
+  endIndex: z.number().int().min(0, "End index must be non-negative")
+}).refine(data => data.endIndex > data.startIndex, {
+  message: "End index must be greater than start index"
+});
+
+// ========================================
+// Phase 3: Advanced Formatting & Validation Schemas
+// ========================================
+
+const SheetsUnmergeCellsSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  startRowIndex: z.number().int().min(0, "Start row index must be non-negative"),
+  endRowIndex: z.number().int().min(0, "End row index must be non-negative"),
+  startColumnIndex: z.number().int().min(0, "Start column index must be non-negative"),
+  endColumnIndex: z.number().int().min(0, "End column index must be non-negative")
+}).refine(data => data.endRowIndex > data.startRowIndex, {
+  message: "End row index must be greater than start row index"
+}).refine(data => data.endColumnIndex > data.startColumnIndex, {
+  message: "End column index must be greater than start column index"
+});
+
+// ========================================
+// Phase 4: Named Ranges, Sorting & Filtering Schemas
+// ========================================
+
+const SheetsAddNamedRangeSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  name: z.string().min(1, "Range name is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  startRowIndex: z.number().int().min(0, "Start row index must be non-negative"),
+  endRowIndex: z.number().int().min(0, "End row index must be non-negative"),
+  startColumnIndex: z.number().int().min(0, "Start column index must be non-negative"),
+  endColumnIndex: z.number().int().min(0, "End column index must be non-negative")
+}).refine(data => data.endRowIndex > data.startRowIndex, {
+  message: "End row index must be greater than start row index"
+}).refine(data => data.endColumnIndex > data.startColumnIndex, {
+  message: "End column index must be greater than start column index"
+});
+
+const SheetsDeleteNamedRangeSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  namedRangeId: z.string().min(1, "Named range ID is required")
+});
+
+const SheetsSortRangeSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  startRowIndex: z.number().int().min(0, "Start row index must be non-negative"),
+  endRowIndex: z.number().int().min(0, "End row index must be non-negative"),
+  startColumnIndex: z.number().int().min(0, "Start column index must be non-negative"),
+  endColumnIndex: z.number().int().min(0, "End column index must be non-negative"),
+  sortSpecs: z.array(z.object({
+    dimensionIndex: z.number().int().min(0, "Dimension index must be non-negative"),
+    sortOrder: z.enum(["ASCENDING", "DESCENDING"], {
+      errorMap: () => ({ message: "Sort order must be ASCENDING or DESCENDING" })
+    })
+  })).min(1, "At least one sort specification is required")
+}).refine(data => data.endRowIndex > data.startRowIndex, {
+  message: "End row index must be greater than start row index"
+}).refine(data => data.endColumnIndex > data.startColumnIndex, {
+  message: "End column index must be greater than start column index"
+});
+
+const SheetsSetBasicFilterSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  startRowIndex: z.number().int().min(0, "Start row index must be non-negative"),
+  endRowIndex: z.number().int().min(0, "End row index must be non-negative"),
+  startColumnIndex: z.number().int().min(0, "Start column index must be non-negative"),
+  endColumnIndex: z.number().int().min(0, "End column index must be non-negative")
+}).refine(data => data.endRowIndex > data.startRowIndex, {
+  message: "End row index must be greater than start row index"
+}).refine(data => data.endColumnIndex > data.startColumnIndex, {
+  message: "End column index must be greater than start column index"
+});
+
+const SheetsClearBasicFilterSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required")
+});
+
+const SheetsFindReplaceSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  find: z.string().min(1, "Find text is required"),
+  replacement: z.string(),
+  matchCase: z.boolean().optional(),
+  matchEntireCell: z.boolean().optional(),
+  searchByRegex: z.boolean().optional(),
+  includeFormulas: z.boolean().optional(),
+  sheetId: z.number().int().min(0).optional(),
+  startRowIndex: z.number().int().min(0).optional(),
+  endRowIndex: z.number().int().min(0).optional(),
+  startColumnIndex: z.number().int().min(0).optional(),
+  endColumnIndex: z.number().int().min(0).optional(),
+  allSheets: z.boolean().optional()
+});
+
+// ========================================
+// Phase 5: Advanced Operations Schemas
+// ========================================
+
+const SheetsTextToColumnsSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  startRowIndex: z.number().int().min(0, "Start row index must be non-negative"),
+  endRowIndex: z.number().int().min(0, "End row index must be non-negative"),
+  startColumnIndex: z.number().int().min(0, "Start column index must be non-negative"),
+  endColumnIndex: z.number().int().min(0, "End column index must be non-negative"),
+  delimiterType: z.enum(["COMMA", "SEMICOLON", "PERIOD", "SPACE", "CUSTOM", "AUTODETECT"], {
+    errorMap: () => ({ message: "Invalid delimiter type" })
+  }),
+  delimiter: z.string().optional()
+}).refine(data => data.endRowIndex > data.startRowIndex, {
+  message: "End row index must be greater than start row index"
+}).refine(data => data.endColumnIndex > data.startColumnIndex, {
+  message: "End column index must be greater than start column index"
+});
+
+const SheetsTrimWhitespaceSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  startRowIndex: z.number().int().min(0, "Start row index must be non-negative"),
+  endRowIndex: z.number().int().min(0, "End row index must be non-negative"),
+  startColumnIndex: z.number().int().min(0, "Start column index must be non-negative"),
+  endColumnIndex: z.number().int().min(0, "End column index must be non-negative")
+}).refine(data => data.endRowIndex > data.startRowIndex, {
+  message: "End row index must be greater than start row index"
+}).refine(data => data.endColumnIndex > data.startColumnIndex, {
+  message: "End column index must be greater than start column index"
+});
+
+const SheetsDeleteDuplicatesSchema = z.object({
+  spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
+  sheetId: z.number().int().min(0, "Sheet ID is required"),
+  startRowIndex: z.number().int().min(0, "Start row index must be non-negative"),
+  endRowIndex: z.number().int().min(0, "End row index must be non-negative"),
+  startColumnIndex: z.number().int().min(0, "Start column index must be non-negative"),
+  endColumnIndex: z.number().int().min(0, "End column index must be non-negative"),
+  comparisonColumns: z.array(z.object({
+    sheetId: z.number().int().min(0, "Sheet ID is required"),
+    dimension: z.enum(["ROWS", "COLUMNS"], {
+      errorMap: () => ({ message: "Dimension must be ROWS or COLUMNS" })
+    }),
+    startIndex: z.number().int().min(0, "Start index must be non-negative"),
+    endIndex: z.number().int().min(0, "End index must be non-negative")
+  })).min(1, "At least one comparison column is required")
+}).refine(data => data.endRowIndex > data.startRowIndex, {
+  message: "End row index must be greater than start row index"
+}).refine(data => data.endColumnIndex > data.startColumnIndex, {
+  message: "End column index must be greater than start column index"
+});
+
 const CreateGoogleSlidesSchema = z.object({
   name: z.string().min(1, "Presentation name is required"),
   slides: z.array(z.object({
@@ -1371,6 +1754,524 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             }
           },
           required: ["spreadsheetId", "range", "condition", "format"]
+        }
+      },
+      // Phase 1: Core Data Operations - Thin Layer Tools
+      {
+        name: "sheets_getSpreadsheet",
+        description: "Get full spreadsheet metadata and optionally grid data. Maps directly to spreadsheets.get API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            ranges: { type: "array", items: { type: "string" }, description: "Optional: specific ranges to retrieve", optional: true },
+            includeGridData: { type: "boolean", description: "Include cell values (default: false)", optional: true }
+          },
+          required: ["spreadsheetId"]
+        }
+      },
+      {
+        name: "sheets_createSpreadsheet",
+        description: "Create a new spreadsheet with full property control. Maps directly to spreadsheets.create API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            title: { type: "string", description: "Spreadsheet title" },
+            locale: { type: "string", description: "Locale (e.g., 'en_US')", optional: true },
+            autoRecalc: { type: "string", enum: ["ON_CHANGE", "MINUTE", "HOUR"], description: "Auto-recalc setting", optional: true },
+            timeZone: { type: "string", description: "Time zone (e.g., 'America/New_York')", optional: true }
+          },
+          required: ["title"]
+        }
+      },
+      {
+        name: "sheets_appendValues",
+        description: "Append values to a sheet after the last row with data. Maps directly to spreadsheets.values.append API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            range: { type: "string", description: "Starting range (e.g., 'Sheet1!A1')" },
+            values: { type: "array", items: { type: "array", items: { type: "string" } }, description: "2D array of values" },
+            valueInputOption: { type: "string", enum: ["RAW", "USER_ENTERED"], description: "How to interpret values (default: USER_ENTERED)", optional: true },
+            insertDataOption: { type: "string", enum: ["OVERWRITE", "INSERT_ROWS"], description: "How to insert data", optional: true }
+          },
+          required: ["spreadsheetId", "range", "values"]
+        }
+      },
+      {
+        name: "sheets_clearValues",
+        description: "Clear values from a range. Maps directly to spreadsheets.values.clear API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            range: { type: "string", description: "Range to clear (e.g., 'Sheet1!A1:B10')" }
+          },
+          required: ["spreadsheetId", "range"]
+        }
+      },
+      {
+        name: "sheets_batchGetValues",
+        description: "Get values from multiple ranges in one request. Maps directly to spreadsheets.values.batchGet API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            ranges: { type: "array", items: { type: "string" }, description: "Array of ranges to retrieve" },
+            majorDimension: { type: "string", enum: ["ROWS", "COLUMNS"], description: "Major dimension", optional: true },
+            valueRenderOption: { type: "string", enum: ["FORMATTED_VALUE", "UNFORMATTED_VALUE", "FORMULA"], description: "How to render values", optional: true }
+          },
+          required: ["spreadsheetId", "ranges"]
+        }
+      },
+      {
+        name: "sheets_batchUpdateValues",
+        description: "Update multiple ranges in one request. Maps directly to spreadsheets.values.batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            valueInputOption: { type: "string", enum: ["RAW", "USER_ENTERED"], description: "How to interpret values (default: USER_ENTERED)", optional: true },
+            data: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  range: { type: "string" },
+                  values: { type: "array", items: { type: "array", items: { type: "string" } } }
+                }
+              },
+              description: "Array of range updates"
+            }
+          },
+          required: ["spreadsheetId", "data"]
+        }
+      },
+      {
+        name: "sheets_batchClearValues",
+        description: "Clear multiple ranges in one request. Maps directly to spreadsheets.values.batchClear API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            ranges: { type: "array", items: { type: "string" }, description: "Array of ranges to clear" }
+          },
+          required: ["spreadsheetId", "ranges"]
+        }
+      },
+      {
+        name: "sheets_addSheet",
+        description: "Add a new sheet to a spreadsheet. Maps directly to AddSheetRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            title: { type: "string", description: "Sheet title" },
+            index: { type: "number", description: "Position in sheet list", optional: true },
+            sheetType: { type: "string", enum: ["GRID", "OBJECT"], description: "Sheet type", optional: true },
+            gridRowCount: { type: "number", description: "Initial row count", optional: true },
+            gridColumnCount: { type: "number", description: "Initial column count", optional: true },
+            frozenRowCount: { type: "number", description: "Number of frozen rows", optional: true },
+            frozenColumnCount: { type: "number", description: "Number of frozen columns", optional: true },
+            hidden: { type: "boolean", description: "Hide sheet", optional: true },
+            tabColorRed: { type: "number", description: "Tab color red (0-1)", optional: true },
+            tabColorGreen: { type: "number", description: "Tab color green (0-1)", optional: true },
+            tabColorBlue: { type: "number", description: "Tab color blue (0-1)", optional: true },
+            rightToLeft: { type: "boolean", description: "RTL direction", optional: true }
+          },
+          required: ["spreadsheetId", "title"]
+        }
+      },
+      {
+        name: "sheets_deleteSheet",
+        description: "Delete a sheet from a spreadsheet. Maps directly to DeleteSheetRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID to delete" }
+          },
+          required: ["spreadsheetId", "sheetId"]
+        }
+      },
+      {
+        name: "sheets_updateSheetProperties",
+        description: "Update sheet properties. Maps directly to UpdateSheetPropertiesRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID to update" },
+            title: { type: "string", description: "New sheet title", optional: true },
+            index: { type: "number", description: "New position", optional: true },
+            hidden: { type: "boolean", description: "Hide/show sheet", optional: true },
+            tabColorRed: { type: "number", description: "Tab color red (0-1)", optional: true },
+            tabColorGreen: { type: "number", description: "Tab color green (0-1)", optional: true },
+            tabColorBlue: { type: "number", description: "Tab color blue (0-1)", optional: true },
+            frozenRowCount: { type: "number", description: "Number of frozen rows", optional: true },
+            frozenColumnCount: { type: "number", description: "Number of frozen columns", optional: true },
+            rightToLeft: { type: "boolean", description: "RTL direction", optional: true }
+          },
+          required: ["spreadsheetId", "sheetId"]
+        }
+      },
+      {
+        name: "sheets_insertDimension",
+        description: "Insert rows or columns. Maps directly to InsertDimensionRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID to insert into" },
+            dimension: { type: "string", enum: ["ROWS", "COLUMNS"], description: "Insert rows or columns" },
+            startIndex: { type: "number", description: "Starting index (0-based, inclusive)" },
+            endIndex: { type: "number", description: "Ending index (0-based, exclusive)" },
+            inheritFromBefore: { type: "boolean", description: "Inherit formatting from before (true) or after (false)", optional: true }
+          },
+          required: ["spreadsheetId", "sheetId", "dimension", "startIndex", "endIndex"]
+        }
+      },
+      {
+        name: "sheets_deleteDimension",
+        description: "Delete rows or columns. Maps directly to DeleteDimensionRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID to delete from" },
+            dimension: { type: "string", enum: ["ROWS", "COLUMNS"], description: "Delete rows or columns" },
+            startIndex: { type: "number", description: "Starting index (0-based, inclusive)" },
+            endIndex: { type: "number", description: "Ending index (0-based, exclusive)" }
+          },
+          required: ["spreadsheetId", "sheetId", "dimension", "startIndex", "endIndex"]
+        }
+      },
+      {
+        name: "sheets_moveDimension",
+        description: "Move rows or columns to a different location. Maps directly to MoveDimensionRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID containing rows/columns to move" },
+            dimension: { type: "string", enum: ["ROWS", "COLUMNS"], description: "Move rows or columns" },
+            startIndex: { type: "number", description: "Starting index of rows/columns to move (0-based, inclusive)" },
+            endIndex: { type: "number", description: "Ending index of rows/columns to move (0-based, exclusive)" },
+            destinationIndex: { type: "number", description: "Index where rows/columns should be moved to (0-based)" }
+          },
+          required: ["spreadsheetId", "sheetId", "dimension", "startIndex", "endIndex", "destinationIndex"]
+        }
+      },
+      {
+        name: "sheets_updateDimensionProperties",
+        description: "Update row heights or column widths. Maps directly to UpdateDimensionPropertiesRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID to update" },
+            dimension: { type: "string", enum: ["ROWS", "COLUMNS"], description: "Update rows or columns" },
+            startIndex: { type: "number", description: "Starting index (0-based, inclusive)" },
+            endIndex: { type: "number", description: "Ending index (0-based, exclusive)" },
+            pixelSize: { type: "number", description: "Row height or column width in pixels", optional: true },
+            hiddenByUser: { type: "boolean", description: "Hide or show rows/columns", optional: true }
+          },
+          required: ["spreadsheetId", "sheetId", "dimension", "startIndex", "endIndex"]
+        }
+      },
+      {
+        name: "sheets_appendDimension",
+        description: "Append rows or columns to the end of a sheet. Maps directly to AppendDimensionRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID to append to" },
+            dimension: { type: "string", enum: ["ROWS", "COLUMNS"], description: "Append rows or columns" },
+            length: { type: "number", description: "Number of rows/columns to append" }
+          },
+          required: ["spreadsheetId", "sheetId", "dimension", "length"]
+        }
+      },
+      {
+        name: "sheets_insertRange",
+        description: "Insert empty cells and shift existing cells. Maps directly to InsertRangeRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID" },
+            startRowIndex: { type: "number", description: "Start row index (0-based, inclusive)" },
+            endRowIndex: { type: "number", description: "End row index (0-based, exclusive)" },
+            startColumnIndex: { type: "number", description: "Start column index (0-based, inclusive)" },
+            endColumnIndex: { type: "number", description: "End column index (0-based, exclusive)" },
+            shiftDimension: { type: "string", enum: ["ROWS", "COLUMNS"], description: "Direction to shift existing cells" }
+          },
+          required: ["spreadsheetId", "sheetId", "startRowIndex", "endRowIndex", "startColumnIndex", "endColumnIndex", "shiftDimension"]
+        }
+      },
+      {
+        name: "sheets_deleteRange",
+        description: "Delete cells and shift remaining cells. Maps directly to DeleteRangeRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID" },
+            startRowIndex: { type: "number", description: "Start row index (0-based, inclusive)" },
+            endRowIndex: { type: "number", description: "End row index (0-based, exclusive)" },
+            startColumnIndex: { type: "number", description: "Start column index (0-based, inclusive)" },
+            endColumnIndex: { type: "number", description: "End column index (0-based, exclusive)" },
+            shiftDimension: { type: "string", enum: ["ROWS", "COLUMNS"], description: "Direction to shift remaining cells" }
+          },
+          required: ["spreadsheetId", "sheetId", "startRowIndex", "endRowIndex", "startColumnIndex", "endColumnIndex", "shiftDimension"]
+        }
+      },
+      {
+        name: "sheets_copyPaste",
+        description: "Copy data/formatting from source to destination. Maps directly to CopyPasteRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sourceSheetId: { type: "number", description: "Source sheet ID" },
+            sourceStartRowIndex: { type: "number", description: "Source start row (0-based, inclusive)" },
+            sourceEndRowIndex: { type: "number", description: "Source end row (0-based, exclusive)" },
+            sourceStartColumnIndex: { type: "number", description: "Source start column (0-based, inclusive)" },
+            sourceEndColumnIndex: { type: "number", description: "Source end column (0-based, exclusive)" },
+            destinationSheetId: { type: "number", description: "Destination sheet ID" },
+            destinationStartRowIndex: { type: "number", description: "Destination start row (0-based, inclusive)" },
+            destinationEndRowIndex: { type: "number", description: "Destination end row (0-based, exclusive)" },
+            destinationStartColumnIndex: { type: "number", description: "Destination start column (0-based, inclusive)" },
+            destinationEndColumnIndex: { type: "number", description: "Destination end column (0-based, exclusive)" },
+            pasteType: { type: "string", enum: ["PASTE_NORMAL", "PASTE_VALUES", "PASTE_FORMAT", "PASTE_NO_BORDERS", "PASTE_FORMULA", "PASTE_DATA_VALIDATION", "PASTE_CONDITIONAL_FORMATTING"], description: "What to paste", optional: true },
+            pasteOrientation: { type: "string", enum: ["NORMAL", "TRANSPOSE"], description: "Paste orientation", optional: true }
+          },
+          required: ["spreadsheetId", "sourceSheetId", "sourceStartRowIndex", "sourceEndRowIndex", "sourceStartColumnIndex", "sourceEndColumnIndex", "destinationSheetId", "destinationStartRowIndex", "destinationEndRowIndex", "destinationStartColumnIndex", "destinationEndColumnIndex"]
+        }
+      },
+      {
+        name: "sheets_cutPaste",
+        description: "Cut data from source and paste to destination. Maps directly to CutPasteRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sourceSheetId: { type: "number", description: "Source sheet ID" },
+            sourceStartRowIndex: { type: "number", description: "Source start row (0-based, inclusive)" },
+            sourceEndRowIndex: { type: "number", description: "Source end row (0-based, exclusive)" },
+            sourceStartColumnIndex: { type: "number", description: "Source start column (0-based, inclusive)" },
+            sourceEndColumnIndex: { type: "number", description: "Source end column (0-based, exclusive)" },
+            destinationSheetId: { type: "number", description: "Destination sheet ID" },
+            destinationRowIndex: { type: "number", description: "Destination top-left row (0-based)" },
+            destinationColumnIndex: { type: "number", description: "Destination top-left column (0-based)" },
+            pasteType: { type: "string", enum: ["PASTE_NORMAL", "PASTE_VALUES", "PASTE_FORMAT", "PASTE_NO_BORDERS", "PASTE_FORMULA", "PASTE_DATA_VALIDATION", "PASTE_CONDITIONAL_FORMATTING"], description: "What to paste", optional: true }
+          },
+          required: ["spreadsheetId", "sourceSheetId", "sourceStartRowIndex", "sourceEndRowIndex", "sourceStartColumnIndex", "sourceEndColumnIndex", "destinationSheetId", "destinationRowIndex", "destinationColumnIndex"]
+        }
+      },
+      {
+        name: "sheets_autoResizeDimensions",
+        description: "Auto-resize row heights or column widths to fit content. Maps directly to AutoResizeDimensionsRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID" },
+            dimension: { type: "string", enum: ["ROWS", "COLUMNS"], description: "Auto-resize rows or columns" },
+            startIndex: { type: "number", description: "Starting index (0-based, inclusive)" },
+            endIndex: { type: "number", description: "Ending index (0-based, exclusive)" }
+          },
+          required: ["spreadsheetId", "sheetId", "dimension", "startIndex", "endIndex"]
+        }
+      },
+      {
+        name: "sheets_unmergeCells",
+        description: "Unmerge cells in a range. Maps directly to UnmergeCellsRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID" },
+            startRowIndex: { type: "number", description: "Start row index (0-based, inclusive)" },
+            endRowIndex: { type: "number", description: "End row index (0-based, exclusive)" },
+            startColumnIndex: { type: "number", description: "Start column index (0-based, inclusive)" },
+            endColumnIndex: { type: "number", description: "End column index (0-based, exclusive)" }
+          },
+          required: ["spreadsheetId", "sheetId", "startRowIndex", "endRowIndex", "startColumnIndex", "endColumnIndex"]
+        }
+      },
+      {
+        name: "sheets_addNamedRange",
+        description: "Create a named range. Maps directly to AddNamedRangeRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            name: { type: "string", description: "Name for the range" },
+            sheetId: { type: "number", description: "Sheet ID" },
+            startRowIndex: { type: "number", description: "Start row index (0-based, inclusive)" },
+            endRowIndex: { type: "number", description: "End row index (0-based, exclusive)" },
+            startColumnIndex: { type: "number", description: "Start column index (0-based, inclusive)" },
+            endColumnIndex: { type: "number", description: "End column index (0-based, exclusive)" }
+          },
+          required: ["spreadsheetId", "name", "sheetId", "startRowIndex", "endRowIndex", "startColumnIndex", "endColumnIndex"]
+        }
+      },
+      {
+        name: "sheets_deleteNamedRange",
+        description: "Delete a named range. Maps directly to DeleteNamedRangeRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            namedRangeId: { type: "string", description: "ID of the named range to delete" }
+          },
+          required: ["spreadsheetId", "namedRangeId"]
+        }
+      },
+      {
+        name: "sheets_sortRange",
+        description: "Sort data in a range. Maps directly to SortRangeRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID" },
+            startRowIndex: { type: "number", description: "Start row index (0-based, inclusive)" },
+            endRowIndex: { type: "number", description: "End row index (0-based, exclusive)" },
+            startColumnIndex: { type: "number", description: "Start column index (0-based, inclusive)" },
+            endColumnIndex: { type: "number", description: "End column index (0-based, exclusive)" },
+            sortSpecs: {
+              type: "array",
+              description: "Sort specifications",
+              items: {
+                type: "object",
+                properties: {
+                  dimensionIndex: { type: "number", description: "Column index to sort by (0-based)" },
+                  sortOrder: { type: "string", enum: ["ASCENDING", "DESCENDING"], description: "Sort order" }
+                },
+                required: ["dimensionIndex", "sortOrder"]
+              }
+            }
+          },
+          required: ["spreadsheetId", "sheetId", "startRowIndex", "endRowIndex", "startColumnIndex", "endColumnIndex", "sortSpecs"]
+        }
+      },
+      {
+        name: "sheets_setBasicFilter",
+        description: "Set a basic filter on a range. Maps directly to SetBasicFilterRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID" },
+            startRowIndex: { type: "number", description: "Start row index (0-based, inclusive)" },
+            endRowIndex: { type: "number", description: "End row index (0-based, exclusive)" },
+            startColumnIndex: { type: "number", description: "Start column index (0-based, inclusive)" },
+            endColumnIndex: { type: "number", description: "End column index (0-based, exclusive)" }
+          },
+          required: ["spreadsheetId", "sheetId", "startRowIndex", "endRowIndex", "startColumnIndex", "endColumnIndex"]
+        }
+      },
+      {
+        name: "sheets_clearBasicFilter",
+        description: "Clear the basic filter on a sheet. Maps directly to ClearBasicFilterRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID to clear filter from" }
+          },
+          required: ["spreadsheetId", "sheetId"]
+        }
+      },
+      {
+        name: "sheets_findReplace",
+        description: "Find and replace text or values. Maps directly to FindReplaceRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            find: { type: "string", description: "Text to find" },
+            replacement: { type: "string", description: "Replacement text" },
+            matchCase: { type: "boolean", description: "Case-sensitive search", optional: true },
+            matchEntireCell: { type: "boolean", description: "Match entire cell content", optional: true },
+            searchByRegex: { type: "boolean", description: "Use regex pattern", optional: true },
+            includeFormulas: { type: "boolean", description: "Search in formulas", optional: true },
+            sheetId: { type: "number", description: "Optional sheet ID to limit search", optional: true },
+            startRowIndex: { type: "number", description: "Optional start row", optional: true },
+            endRowIndex: { type: "number", description: "Optional end row", optional: true },
+            startColumnIndex: { type: "number", description: "Optional start column", optional: true },
+            endColumnIndex: { type: "number", description: "Optional end column", optional: true },
+            allSheets: { type: "boolean", description: "Search all sheets", optional: true }
+          },
+          required: ["spreadsheetId", "find", "replacement"]
+        }
+      },
+      {
+        name: "sheets_textToColumns",
+        description: "Split text in cells into multiple columns. Maps directly to TextToColumnsRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID" },
+            startRowIndex: { type: "number", description: "Start row index (0-based, inclusive)" },
+            endRowIndex: { type: "number", description: "End row index (0-based, exclusive)" },
+            startColumnIndex: { type: "number", description: "Start column index (0-based, inclusive)" },
+            endColumnIndex: { type: "number", description: "End column index (0-based, exclusive)" },
+            delimiterType: { type: "string", enum: ["COMMA", "SEMICOLON", "PERIOD", "SPACE", "CUSTOM", "AUTODETECT"], description: "Delimiter type" },
+            delimiter: { type: "string", description: "Custom delimiter (required if delimiterType is CUSTOM)", optional: true }
+          },
+          required: ["spreadsheetId", "sheetId", "startRowIndex", "endRowIndex", "startColumnIndex", "endColumnIndex", "delimiterType"]
+        }
+      },
+      {
+        name: "sheets_trimWhitespace",
+        description: "Remove leading and trailing whitespace from cells. Maps directly to TrimWhitespaceRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID" },
+            startRowIndex: { type: "number", description: "Start row index (0-based, inclusive)" },
+            endRowIndex: { type: "number", description: "End row index (0-based, exclusive)" },
+            startColumnIndex: { type: "number", description: "Start column index (0-based, inclusive)" },
+            endColumnIndex: { type: "number", description: "End column index (0-based, exclusive)" }
+          },
+          required: ["spreadsheetId", "sheetId", "startRowIndex", "endRowIndex", "startColumnIndex", "endColumnIndex"]
+        }
+      },
+      {
+        name: "sheets_deleteDuplicates",
+        description: "Remove duplicate rows from a range. Maps directly to DeleteDuplicatesRequest in batchUpdate API.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            spreadsheetId: { type: "string", description: "Spreadsheet ID" },
+            sheetId: { type: "number", description: "Sheet ID" },
+            startRowIndex: { type: "number", description: "Start row index (0-based, inclusive)" },
+            endRowIndex: { type: "number", description: "End row index (0-based, exclusive)" },
+            startColumnIndex: { type: "number", description: "Start column index (0-based, inclusive)" },
+            endColumnIndex: { type: "number", description: "End column index (0-based, exclusive)" },
+            comparisonColumns: {
+              type: "array",
+              description: "Columns to use for duplicate comparison",
+              items: {
+                type: "object",
+                properties: {
+                  sheetId: { type: "number", description: "Sheet ID" },
+                  dimension: { type: "string", enum: ["ROWS", "COLUMNS"], description: "Dimension type" },
+                  startIndex: { type: "number", description: "Start index (0-based, inclusive)" },
+                  endIndex: { type: "number", description: "End index (0-based, exclusive)" }
+                },
+                required: ["sheetId", "dimension", "startIndex", "endIndex"]
+              }
+            }
+          },
+          required: ["spreadsheetId", "sheetId", "startRowIndex", "endRowIndex", "startColumnIndex", "endColumnIndex", "comparisonColumns"]
         }
       },
       {
@@ -3179,6 +4080,1247 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [{ type: "text", text: `Added conditional formatting to range ${args.range}` }],
           isError: false
         };
+      }
+
+      // Phase 1: Core Data Operations - Thin Layer Handlers
+      case "sheets_getSpreadsheet": {
+        const validation = SheetsGetSpreadsheetSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+          const response = await sheets.spreadsheets.get({
+            spreadsheetId: args.spreadsheetId,
+            ranges: args.ranges,
+            includeGridData: args.includeGridData
+          });
+
+          return {
+            content: [{ type: "text", text: JSON.stringify(response.data, null, 2) }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to get spreadsheet');
+        }
+      }
+
+      case "sheets_createSpreadsheet": {
+        const validation = SheetsCreateSpreadsheetSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+          const requestBody: any = {
+            properties: {
+              title: args.title
+            }
+          };
+
+          if (args.locale) requestBody.properties.locale = args.locale;
+          if (args.autoRecalc) requestBody.properties.autoRecalc = args.autoRecalc;
+          if (args.timeZone) requestBody.properties.timeZone = args.timeZone;
+
+          const response = await sheets.spreadsheets.create({ requestBody });
+
+          return {
+            content: [{
+              type: "text",
+              text: `Created spreadsheet "${args.title}"\nID: ${response.data.spreadsheetId}\nURL: ${response.data.spreadsheetUrl}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to create spreadsheet');
+        }
+      }
+
+      case "sheets_appendValues": {
+        const validation = SheetsAppendValuesSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+          const response = await sheets.spreadsheets.values.append({
+            spreadsheetId: args.spreadsheetId,
+            range: args.range,
+            valueInputOption: args.valueInputOption || 'USER_ENTERED',
+            insertDataOption: args.insertDataOption,
+            requestBody: { values: args.values }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: `Appended ${args.values.length} rows to ${args.range}\nUpdated range: ${response.data.updates?.updatedRange}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to append values');
+        }
+      }
+
+      case "sheets_clearValues": {
+        const validation = SheetsClearValuesSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+          const response = await sheets.spreadsheets.values.clear({
+            spreadsheetId: args.spreadsheetId,
+            range: args.range
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: `Cleared range: ${response.data.clearedRange}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to clear values');
+        }
+      }
+
+      case "sheets_batchGetValues": {
+        const validation = SheetsBatchGetValuesSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+          const response = await sheets.spreadsheets.values.batchGet({
+            spreadsheetId: args.spreadsheetId,
+            ranges: args.ranges,
+            majorDimension: args.majorDimension,
+            valueRenderOption: args.valueRenderOption
+          });
+
+          return {
+            content: [{ type: "text", text: JSON.stringify(response.data, null, 2) }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to batch get values');
+        }
+      }
+
+      case "sheets_batchUpdateValues": {
+        const validation = SheetsBatchUpdateValuesSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+          const response = await sheets.spreadsheets.values.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              valueInputOption: args.valueInputOption || 'USER_ENTERED',
+              data: args.data
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: `Updated ${response.data.totalUpdatedCells} cells across ${response.data.totalUpdatedSheets} sheets`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to batch update values');
+        }
+      }
+
+      case "sheets_batchClearValues": {
+        const validation = SheetsBatchClearValuesSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+          const response = await sheets.spreadsheets.values.batchClear({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: { ranges: args.ranges }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: `Cleared ${response.data.clearedRanges?.length || 0} ranges`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to batch clear values');
+        }
+      }
+
+      case "sheets_addSheet": {
+        const validation = SheetsAddSheetSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          const properties: any = { title: args.title };
+          if (args.index !== undefined) properties.index = args.index;
+          if (args.sheetType) properties.sheetType = args.sheetType;
+          if (args.hidden !== undefined) properties.hidden = args.hidden;
+          if (args.rightToLeft !== undefined) properties.rightToLeft = args.rightToLeft;
+
+          if (args.tabColorRed !== undefined || args.tabColorGreen !== undefined || args.tabColorBlue !== undefined) {
+            properties.tabColor = {
+              red: args.tabColorRed || 0,
+              green: args.tabColorGreen || 0,
+              blue: args.tabColorBlue || 0
+            };
+          }
+
+          if (args.gridRowCount || args.gridColumnCount || args.frozenRowCount !== undefined || args.frozenColumnCount !== undefined) {
+            properties.gridProperties = {};
+            if (args.gridRowCount) properties.gridProperties.rowCount = args.gridRowCount;
+            if (args.gridColumnCount) properties.gridProperties.columnCount = args.gridColumnCount;
+            if (args.frozenRowCount !== undefined) properties.gridProperties.frozenRowCount = args.frozenRowCount;
+            if (args.frozenColumnCount !== undefined) properties.gridProperties.frozenColumnCount = args.frozenColumnCount;
+          }
+
+          const response = await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{ addSheet: { properties } }]
+            }
+          });
+
+          const addedSheet = response.data.replies?.[0]?.addSheet?.properties;
+          return {
+            content: [{
+              type: "text",
+              text: `Added sheet "${args.title}"\nSheet ID: ${addedSheet?.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to add sheet');
+        }
+      }
+
+      case "sheets_deleteSheet": {
+        const validation = SheetsDeleteSheetSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{ deleteSheet: { sheetId: args.sheetId } }]
+            }
+          });
+
+          return {
+            content: [{ type: "text", text: `Deleted sheet with ID: ${args.sheetId}` }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to delete sheet');
+        }
+      }
+
+      case "sheets_updateSheetProperties": {
+        const validation = SheetsUpdateSheetPropertiesSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          const properties: any = { sheetId: args.sheetId };
+          const fields: string[] = [];
+
+          if (args.title !== undefined) {
+            properties.title = args.title;
+            fields.push('title');
+          }
+          if (args.index !== undefined) {
+            properties.index = args.index;
+            fields.push('index');
+          }
+          if (args.hidden !== undefined) {
+            properties.hidden = args.hidden;
+            fields.push('hidden');
+          }
+          if (args.rightToLeft !== undefined) {
+            properties.rightToLeft = args.rightToLeft;
+            fields.push('rightToLeft');
+          }
+
+          if (args.tabColorRed !== undefined || args.tabColorGreen !== undefined || args.tabColorBlue !== undefined) {
+            properties.tabColor = {
+              red: args.tabColorRed || 0,
+              green: args.tabColorGreen || 0,
+              blue: args.tabColorBlue || 0
+            };
+            fields.push('tabColor');
+          }
+
+          if (args.frozenRowCount !== undefined || args.frozenColumnCount !== undefined) {
+            properties.gridProperties = {};
+            if (args.frozenRowCount !== undefined) {
+              properties.gridProperties.frozenRowCount = args.frozenRowCount;
+              fields.push('gridProperties.frozenRowCount');
+            }
+            if (args.frozenColumnCount !== undefined) {
+              properties.gridProperties.frozenColumnCount = args.frozenColumnCount;
+              fields.push('gridProperties.frozenColumnCount');
+            }
+          }
+
+          if (fields.length === 0) {
+            return errorResponse('No properties specified to update');
+          }
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                updateSheetProperties: {
+                  properties,
+                  fields: fields.join(',')
+                }
+              }]
+            }
+          });
+
+          return {
+            content: [{ type: "text", text: `Updated sheet properties for sheet ID: ${args.sheetId}` }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to update sheet properties');
+        }
+      }
+
+      // ========================================
+      // Phase 2: Row/Column/Range Operations Handlers
+      // ========================================
+
+      case "sheets_insertDimension": {
+        const validation = SheetsInsertDimensionSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          const insertRequest: any = {
+            range: {
+              sheetId: args.sheetId,
+              dimension: args.dimension,
+              startIndex: args.startIndex,
+              endIndex: args.endIndex
+            }
+          };
+
+          if (args.inheritFromBefore !== undefined) {
+            insertRequest.inheritFromBefore = args.inheritFromBefore;
+          }
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                insertDimension: insertRequest
+              }]
+            }
+          });
+
+          const count = args.endIndex - args.startIndex;
+          const dimensionType = args.dimension === 'ROWS' ? 'rows' : 'columns';
+          return {
+            content: [{
+              type: "text",
+              text: `Inserted ${count} ${dimensionType} at index ${args.startIndex} in sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to insert dimension');
+        }
+      }
+
+      case "sheets_deleteDimension": {
+        const validation = SheetsDeleteDimensionSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                deleteDimension: {
+                  range: {
+                    sheetId: args.sheetId,
+                    dimension: args.dimension,
+                    startIndex: args.startIndex,
+                    endIndex: args.endIndex
+                  }
+                }
+              }]
+            }
+          });
+
+          const count = args.endIndex - args.startIndex;
+          const dimensionType = args.dimension === 'ROWS' ? 'rows' : 'columns';
+          return {
+            content: [{
+              type: "text",
+              text: `Deleted ${count} ${dimensionType} (indices ${args.startIndex}-${args.endIndex - 1}) from sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to delete dimension');
+        }
+      }
+
+      case "sheets_moveDimension": {
+        const validation = SheetsMoveDimensionSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                moveDimension: {
+                  source: {
+                    sheetId: args.sheetId,
+                    dimension: args.dimension,
+                    startIndex: args.startIndex,
+                    endIndex: args.endIndex
+                  },
+                  destinationIndex: args.destinationIndex
+                }
+              }]
+            }
+          });
+
+          const count = args.endIndex - args.startIndex;
+          const dimensionType = args.dimension === 'ROWS' ? 'rows' : 'columns';
+          return {
+            content: [{
+              type: "text",
+              text: `Moved ${count} ${dimensionType} (indices ${args.startIndex}-${args.endIndex - 1}) to index ${args.destinationIndex} in sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to move dimension');
+        }
+      }
+
+      case "sheets_updateDimensionProperties": {
+        const validation = SheetsUpdateDimensionPropertiesSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          const properties: any = {};
+          const fields: string[] = [];
+
+          if (args.pixelSize !== undefined) {
+            properties.pixelSize = args.pixelSize;
+            fields.push('pixelSize');
+          }
+
+          if (args.hiddenByUser !== undefined) {
+            properties.hiddenByUser = args.hiddenByUser;
+            fields.push('hiddenByUser');
+          }
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                updateDimensionProperties: {
+                  range: {
+                    sheetId: args.sheetId,
+                    dimension: args.dimension,
+                    startIndex: args.startIndex,
+                    endIndex: args.endIndex
+                  },
+                  properties,
+                  fields: fields.join(',')
+                }
+              }]
+            }
+          });
+
+          const count = args.endIndex - args.startIndex;
+          const dimensionType = args.dimension === 'ROWS' ? 'rows' : 'columns';
+          const updates: string[] = [];
+          if (args.pixelSize !== undefined) updates.push(`size=${args.pixelSize}px`);
+          if (args.hiddenByUser !== undefined) updates.push(`hidden=${args.hiddenByUser}`);
+
+          return {
+            content: [{
+              type: "text",
+              text: `Updated ${count} ${dimensionType} (indices ${args.startIndex}-${args.endIndex - 1}): ${updates.join(', ')} in sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to update dimension properties');
+        }
+      }
+
+      case "sheets_appendDimension": {
+        const validation = SheetsAppendDimensionSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                appendDimension: {
+                  sheetId: args.sheetId,
+                  dimension: args.dimension,
+                  length: args.length
+                }
+              }]
+            }
+          });
+
+          const dimensionType = args.dimension === 'ROWS' ? 'rows' : 'columns';
+          return {
+            content: [{
+              type: "text",
+              text: `Appended ${args.length} ${dimensionType} to end of sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to append dimension');
+        }
+      }
+
+      case "sheets_insertRange": {
+        const validation = SheetsInsertRangeSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                insertRange: {
+                  range: {
+                    sheetId: args.sheetId,
+                    startRowIndex: args.startRowIndex,
+                    endRowIndex: args.endRowIndex,
+                    startColumnIndex: args.startColumnIndex,
+                    endColumnIndex: args.endColumnIndex
+                  },
+                  shiftDimension: args.shiftDimension
+                }
+              }]
+            }
+          });
+
+          const rows = args.endRowIndex - args.startRowIndex;
+          const cols = args.endColumnIndex - args.startColumnIndex;
+          return {
+            content: [{
+              type: "text",
+              text: `Inserted range (${rows}x${cols} cells) at R${args.startRowIndex}C${args.startColumnIndex}, shifting ${args.shiftDimension} in sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to insert range');
+        }
+      }
+
+      case "sheets_deleteRange": {
+        const validation = SheetsDeleteRangeSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                deleteRange: {
+                  range: {
+                    sheetId: args.sheetId,
+                    startRowIndex: args.startRowIndex,
+                    endRowIndex: args.endRowIndex,
+                    startColumnIndex: args.startColumnIndex,
+                    endColumnIndex: args.endColumnIndex
+                  },
+                  shiftDimension: args.shiftDimension
+                }
+              }]
+            }
+          });
+
+          const rows = args.endRowIndex - args.startRowIndex;
+          const cols = args.endColumnIndex - args.startColumnIndex;
+          return {
+            content: [{
+              type: "text",
+              text: `Deleted range (${rows}x${cols} cells) at R${args.startRowIndex}C${args.startColumnIndex}, shifting ${args.shiftDimension} in sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to delete range');
+        }
+      }
+
+      case "sheets_copyPaste": {
+        const validation = SheetsCopyPasteSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          const copyPasteRequest: any = {
+            source: {
+              sheetId: args.sourceSheetId,
+              startRowIndex: args.sourceStartRowIndex,
+              endRowIndex: args.sourceEndRowIndex,
+              startColumnIndex: args.sourceStartColumnIndex,
+              endColumnIndex: args.sourceEndColumnIndex
+            },
+            destination: {
+              sheetId: args.destinationSheetId,
+              startRowIndex: args.destinationStartRowIndex,
+              endRowIndex: args.destinationEndRowIndex,
+              startColumnIndex: args.destinationStartColumnIndex,
+              endColumnIndex: args.destinationEndColumnIndex
+            }
+          };
+
+          if (args.pasteType) {
+            copyPasteRequest.pasteType = args.pasteType;
+          }
+
+          if (args.pasteOrientation) {
+            copyPasteRequest.pasteOrientation = args.pasteOrientation;
+          }
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                copyPaste: copyPasteRequest
+              }]
+            }
+          });
+
+          const sourceRows = args.sourceEndRowIndex - args.sourceStartRowIndex;
+          const sourceCols = args.sourceEndColumnIndex - args.sourceStartColumnIndex;
+          const pasteInfo = args.pasteType ? ` (${args.pasteType})` : '';
+          const orientInfo = args.pasteOrientation === 'TRANSPOSE' ? ' with transpose' : '';
+
+          return {
+            content: [{
+              type: "text",
+              text: `Copied ${sourceRows}x${sourceCols} range from sheet ${args.sourceSheetId} to sheet ${args.destinationSheetId}${pasteInfo}${orientInfo}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to copy paste');
+        }
+      }
+
+      case "sheets_cutPaste": {
+        const validation = SheetsCutPasteSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          const cutPasteRequest: any = {
+            source: {
+              sheetId: args.sourceSheetId,
+              startRowIndex: args.sourceStartRowIndex,
+              endRowIndex: args.sourceEndRowIndex,
+              startColumnIndex: args.sourceStartColumnIndex,
+              endColumnIndex: args.sourceEndColumnIndex
+            },
+            destination: {
+              sheetId: args.destinationSheetId,
+              rowIndex: args.destinationRowIndex,
+              columnIndex: args.destinationColumnIndex
+            }
+          };
+
+          if (args.pasteType) {
+            cutPasteRequest.pasteType = args.pasteType;
+          }
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                cutPaste: cutPasteRequest
+              }]
+            }
+          });
+
+          const sourceRows = args.sourceEndRowIndex - args.sourceStartRowIndex;
+          const sourceCols = args.sourceEndColumnIndex - args.sourceStartColumnIndex;
+          const pasteInfo = args.pasteType ? ` (${args.pasteType})` : '';
+
+          return {
+            content: [{
+              type: "text",
+              text: `Cut ${sourceRows}x${sourceCols} range from sheet ${args.sourceSheetId} to R${args.destinationRowIndex}C${args.destinationColumnIndex} in sheet ${args.destinationSheetId}${pasteInfo}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to cut paste');
+        }
+      }
+
+      case "sheets_autoResizeDimensions": {
+        const validation = SheetsAutoResizeDimensionsSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                autoResizeDimensions: {
+                  dimensions: {
+                    sheetId: args.sheetId,
+                    dimension: args.dimension,
+                    startIndex: args.startIndex,
+                    endIndex: args.endIndex
+                  }
+                }
+              }]
+            }
+          });
+
+          const count = args.endIndex - args.startIndex;
+          const dimensionType = args.dimension === 'ROWS' ? 'rows' : 'columns';
+          return {
+            content: [{
+              type: "text",
+              text: `Auto-resized ${count} ${dimensionType} (indices ${args.startIndex}-${args.endIndex - 1}) in sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to auto-resize dimensions');
+        }
+      }
+
+      // ========================================
+      // Phase 3: Advanced Formatting & Validation Handlers
+      // ========================================
+
+      case "sheets_unmergeCells": {
+        const validation = SheetsUnmergeCellsSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                unmergeCells: {
+                  range: {
+                    sheetId: args.sheetId,
+                    startRowIndex: args.startRowIndex,
+                    endRowIndex: args.endRowIndex,
+                    startColumnIndex: args.startColumnIndex,
+                    endColumnIndex: args.endColumnIndex
+                  }
+                }
+              }]
+            }
+          });
+
+          const rows = args.endRowIndex - args.startRowIndex;
+          const cols = args.endColumnIndex - args.startColumnIndex;
+          return {
+            content: [{
+              type: "text",
+              text: `Unmerged cells in range (${rows}x${cols} cells) at R${args.startRowIndex}C${args.startColumnIndex} in sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to unmerge cells');
+        }
+      }
+
+      // ========================================
+      // Phase 4: Named Ranges, Sorting & Filtering Handlers
+      // ========================================
+
+      case "sheets_addNamedRange": {
+        const validation = SheetsAddNamedRangeSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          const response = await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                addNamedRange: {
+                  namedRange: {
+                    name: args.name,
+                    range: {
+                      sheetId: args.sheetId,
+                      startRowIndex: args.startRowIndex,
+                      endRowIndex: args.endRowIndex,
+                      startColumnIndex: args.startColumnIndex,
+                      endColumnIndex: args.endColumnIndex
+                    }
+                  }
+                }
+              }]
+            }
+          });
+
+          const namedRangeId = response.data.replies?.[0]?.addNamedRange?.namedRange?.namedRangeId || 'unknown';
+          return {
+            content: [{
+              type: "text",
+              text: `Created named range "${args.name}" (ID: ${namedRangeId}) in sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to add named range');
+        }
+      }
+
+      case "sheets_deleteNamedRange": {
+        const validation = SheetsDeleteNamedRangeSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                deleteNamedRange: {
+                  namedRangeId: args.namedRangeId
+                }
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: `Deleted named range with ID: ${args.namedRangeId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to delete named range');
+        }
+      }
+
+      case "sheets_sortRange": {
+        const validation = SheetsSortRangeSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                sortRange: {
+                  range: {
+                    sheetId: args.sheetId,
+                    startRowIndex: args.startRowIndex,
+                    endRowIndex: args.endRowIndex,
+                    startColumnIndex: args.startColumnIndex,
+                    endColumnIndex: args.endColumnIndex
+                  },
+                  sortSpecs: args.sortSpecs
+                }
+              }]
+            }
+          });
+
+          const rows = args.endRowIndex - args.startRowIndex;
+          const cols = args.endColumnIndex - args.startColumnIndex;
+          const specsDesc = args.sortSpecs.map(s => `col ${s.dimensionIndex} ${s.sortOrder}`).join(', ');
+          return {
+            content: [{
+              type: "text",
+              text: `Sorted range (${rows}x${cols} cells) by ${specsDesc} in sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to sort range');
+        }
+      }
+
+      case "sheets_setBasicFilter": {
+        const validation = SheetsSetBasicFilterSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                setBasicFilter: {
+                  filter: {
+                    range: {
+                      sheetId: args.sheetId,
+                      startRowIndex: args.startRowIndex,
+                      endRowIndex: args.endRowIndex,
+                      startColumnIndex: args.startColumnIndex,
+                      endColumnIndex: args.endColumnIndex
+                    }
+                  }
+                }
+              }]
+            }
+          });
+
+          const rows = args.endRowIndex - args.startRowIndex;
+          const cols = args.endColumnIndex - args.startColumnIndex;
+          return {
+            content: [{
+              type: "text",
+              text: `Set basic filter on range (${rows}x${cols} cells) in sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to set basic filter');
+        }
+      }
+
+      case "sheets_clearBasicFilter": {
+        const validation = SheetsClearBasicFilterSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                clearBasicFilter: {
+                  sheetId: args.sheetId
+                }
+              }]
+            }
+          });
+
+          return {
+            content: [{
+              type: "text",
+              text: `Cleared basic filter from sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to clear basic filter');
+        }
+      }
+
+      case "sheets_findReplace": {
+        const validation = SheetsFindReplaceSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          const findReplaceRequest: any = {
+            find: args.find,
+            replacement: args.replacement
+          };
+
+          if (args.matchCase !== undefined) findReplaceRequest.matchCase = args.matchCase;
+          if (args.matchEntireCell !== undefined) findReplaceRequest.matchEntireCell = args.matchEntireCell;
+          if (args.searchByRegex !== undefined) findReplaceRequest.searchByRegex = args.searchByRegex;
+          if (args.includeFormulas !== undefined) findReplaceRequest.includeFormulas = args.includeFormulas;
+          if (args.allSheets !== undefined) findReplaceRequest.allSheets = args.allSheets;
+
+          if (args.sheetId !== undefined || args.startRowIndex !== undefined) {
+            findReplaceRequest.range = {} as any;
+            if (args.sheetId !== undefined) findReplaceRequest.range.sheetId = args.sheetId;
+            if (args.startRowIndex !== undefined) findReplaceRequest.range.startRowIndex = args.startRowIndex;
+            if (args.endRowIndex !== undefined) findReplaceRequest.range.endRowIndex = args.endRowIndex;
+            if (args.startColumnIndex !== undefined) findReplaceRequest.range.startColumnIndex = args.startColumnIndex;
+            if (args.endColumnIndex !== undefined) findReplaceRequest.range.endColumnIndex = args.endColumnIndex;
+          }
+
+          const response = await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                findReplace: findReplaceRequest
+              }]
+            }
+          });
+
+          const replacementCount = response.data.replies?.[0]?.findReplace?.occurrencesChanged || 0;
+          return {
+            content: [{
+              type: "text",
+              text: `Replaced ${replacementCount} occurrence(s) of "${args.find}" with "${args.replacement}"`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to find and replace');
+        }
+      }
+
+      // ========================================
+      // Phase 5: Advanced Operations Handlers
+      // ========================================
+
+      case "sheets_textToColumns": {
+        const validation = SheetsTextToColumnsSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          const textToColumnsRequest: any = {
+            source: {
+              sheetId: args.sheetId,
+              startRowIndex: args.startRowIndex,
+              endRowIndex: args.endRowIndex,
+              startColumnIndex: args.startColumnIndex,
+              endColumnIndex: args.endColumnIndex
+            },
+            delimiterType: args.delimiterType
+          };
+
+          if (args.delimiter !== undefined) {
+            textToColumnsRequest.delimiter = args.delimiter;
+          }
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                textToColumns: textToColumnsRequest
+              }]
+            }
+          });
+
+          const rows = args.endRowIndex - args.startRowIndex;
+          const cols = args.endColumnIndex - args.startColumnIndex;
+          return {
+            content: [{
+              type: "text",
+              text: `Split text to columns in range (${rows}x${cols} cells) using ${args.delimiterType} delimiter in sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to split text to columns');
+        }
+      }
+
+      case "sheets_trimWhitespace": {
+        const validation = SheetsTrimWhitespaceSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                trimWhitespace: {
+                  range: {
+                    sheetId: args.sheetId,
+                    startRowIndex: args.startRowIndex,
+                    endRowIndex: args.endRowIndex,
+                    startColumnIndex: args.startColumnIndex,
+                    endColumnIndex: args.endColumnIndex
+                  }
+                }
+              }]
+            }
+          });
+
+          const rows = args.endRowIndex - args.startRowIndex;
+          const cols = args.endColumnIndex - args.startColumnIndex;
+          return {
+            content: [{
+              type: "text",
+              text: `Trimmed whitespace in range (${rows}x${cols} cells) in sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to trim whitespace');
+        }
+      }
+
+      case "sheets_deleteDuplicates": {
+        const validation = SheetsDeleteDuplicatesSchema.safeParse(request.params.arguments);
+        if (!validation.success) {
+          return errorResponse(validation.error.errors[0].message);
+        }
+        const args = validation.data;
+
+        try {
+          const sheets = google.sheets({ version: 'v4', auth: authClient });
+
+          const response = await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: args.spreadsheetId,
+            requestBody: {
+              requests: [{
+                deleteDuplicates: {
+                  range: {
+                    sheetId: args.sheetId,
+                    startRowIndex: args.startRowIndex,
+                    endRowIndex: args.endRowIndex,
+                    startColumnIndex: args.startColumnIndex,
+                    endColumnIndex: args.endColumnIndex
+                  },
+                  comparisonColumns: args.comparisonColumns
+                }
+              }]
+            }
+          });
+
+          const duplicatesRemoved = response.data.replies?.[0]?.deleteDuplicates?.duplicatesRemovedCount || 0;
+          return {
+            content: [{
+              type: "text",
+              text: `Deleted ${duplicatesRemoved} duplicate row(s) from sheet ID ${args.sheetId}`
+            }],
+            isError: false
+          };
+        } catch (error: any) {
+          return errorResponse(error.message || 'Failed to delete duplicates');
+        }
       }
 
       case "createGoogleSlides": {

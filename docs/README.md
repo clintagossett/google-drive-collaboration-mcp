@@ -1,0 +1,35 @@
+# Google Drive MCP Documentation
+
+This directory contains documentation for using the Google Drive MCP server effectively.
+
+## Workflows
+
+Best practices and step-by-step guides for common tasks:
+
+- [**Google Docs Formatting**](./workflows/google-docs-formatting.md) - Comprehensive guide to applying document styles, formatting content, and creating clean, well-structured Google Docs
+
+## Directory Structure
+
+```
+docs/
+├── README.md (this file)
+└── workflows/
+    └── google-docs-formatting.md
+```
+
+## Contributing
+
+When you discover new patterns, edge cases, or best practices:
+1. Update the relevant workflow document
+2. Include real-world examples from actual usage
+3. Document both incorrect and correct approaches
+4. Update the "Last updated" date at the bottom of the file
+
+## Future Topics
+
+Potential workflow documents to add:
+- Google Sheets: Formatting and formula best practices
+- Google Slides: Layout and design patterns
+- Folder organization: Naming conventions and structure
+- Batch operations: Processing multiple documents efficiently
+- Error handling: Common issues and solutions

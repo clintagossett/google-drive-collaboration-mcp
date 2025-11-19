@@ -64,6 +64,9 @@ touch docs/historical/issue_<number>/README.md
 ### 1. <Document Name>
 - **[DOCUMENT.md](./DOCUMENT.md)** - Description
 
+### 2. Decisions Made
+- **[DECISIONS.md](./DECISIONS.md)** - All autonomous decisions with rationale
+
 ---
 
 ## Quick Summary
@@ -80,6 +83,44 @@ touch docs/historical/issue_<number>/README.md
 
 **Created**: YYYY-MM-DD
 **Last Updated**: YYYY-MM-DD
+```
+
+**DECISIONS.md Template**:
+```markdown
+# Decisions Made During Issue #<number>
+
+This document records all significant decisions made autonomously during implementation.
+
+---
+
+## Decision 1: <Title>
+
+**Date**: YYYY-MM-DD
+
+**Context**: <What led to this decision>
+
+**Options Considered**:
+- Option A: <description>
+  - Pros: <list>
+  - Cons: <list>
+- Option B: <description>
+  - Pros: <list>
+  - Cons: <list>
+
+**Decision**: Chose Option <X>
+
+**Rationale**:
+- Reason 1
+- Reason 2
+- Reference to design principle or past lesson
+
+**Outcome**: <What happened after implementing this decision>
+
+---
+
+## Decision 2: <Title>
+
+...
 ```
 
 ### Step 4: Break Down Into Phases
@@ -441,28 +482,78 @@ npm run test:coverage
 **Blockers**: None / <blocker description>
 ```
 
-### Using AskUserQuestion Tool
+### Autonomous Decision-Making
 
-**When to ask questions**:
-- ✅ Multiple valid approaches exist
-- ✅ Breaking changes need approval
-- ✅ Unclear requirements
-- ✅ Design decisions affecting architecture
+**For true autonomy, answer your own questions.**
 
-**Format**:
-```typescript
-AskUserQuestion({
-  questions: [{
-    question: "Which approach should we use for X?",
-    header: "Approach",
-    options: [
-      { label: "Option A", description: "Pros/cons of A" },
-      { label: "Option B", description: "Pros/cons of B" }
-    ],
-    multiSelect: false
-  }]
-})
+**When questions arise**:
+
+1. **Document the question**:
+   ```markdown
+   ## Decision Point: <Question>
+
+   **Context**: <What led to this question>
+
+   **Options**:
+   - Option A: <description>
+     - Pros: <list>
+     - Cons: <list>
+   - Option B: <description>
+     - Pros: <list>
+     - Cons: <list>
+
+   **Decision**: Chose Option <X>
+
+   **Rationale**: <Why this is the best choice>
+   ```
+
+2. **Make the best decision based on**:
+   - Design principles (DESIGN_PRINCIPLES.md)
+   - Past lessons (LESSONS_LEARNED.md)
+   - API documentation
+   - Code consistency
+   - User needs (inferred from issue)
+
+3. **Document in historical folder**:
+   - Create `docs/historical/issue_<number>/DECISIONS.md`
+   - Record all decisions made
+   - Include rationale for each
+
+4. **Move forward with confidence**
+
+**Example**:
+```markdown
+## Decision Point: Should we remove or deprecate tool X?
+
+**Context**: Tool X violates 1:1 API principles but may have users.
+
+**Options**:
+- Option A: Deprecate first, remove later
+  - Pros: Backward compatibility, migration time
+  - Cons: Technical debt, confusing API
+- Option B: Remove immediately, document migration
+  - Pros: Clean codebase, clear direction
+  - Cons: Breaking change
+
+**Decision**: Chose Option B (remove immediately)
+
+**Rationale**:
+- Design principles prioritize clean 1:1 mapping
+- Proper replacement tools exist (sheets_createSpreadsheet + sheets_appendValues)
+- README documents migration path
+- Follows pattern from Issue #2 Phase 1
+- User can compose operations with 1:1 tools
+
+**Result**: Tool removed, documentation updated, tests passing
 ```
+
+**Only ask user for input when**:
+- ❌ Never for technical implementation details
+- ❌ Never for design pattern questions (follow DESIGN_PRINCIPLES.md)
+- ❌ Never for which API to use (read API docs)
+- ✅ Major product direction changes (e.g., "Should we support API version X?")
+- ✅ Business decisions outside your scope (e.g., "Should we monetize?")
+- ✅ Deployment/infrastructure changes (e.g., "Should we deploy to prod?")
 
 ### Closing Issues
 
@@ -765,6 +856,13 @@ EOF
 
 ## Version History
 
+- **v1.1** (2025-11-19): Added autonomous decision-making section
+  - Removed AskUserQuestion guidance (too dependent)
+  - Added decision documentation process
+  - Added DECISIONS.md template
+  - Clarified when to involve user (never for technical decisions)
+  - Emphasis on answering own questions and documenting rationale
+
 - **v1.0** (2025-11-19): Initial workflow documentation
   - Based on Issues #1, #2, and #4 patterns
   - Includes per-tool testing emphasis
@@ -774,15 +872,29 @@ EOF
 
 ## Summary
 
-**Core Principles**:
+**Core Principles for TRUE Autonomy**:
 1. 📖 Read design docs FIRST
 2. 📝 Plan before implementing
 3. 🔄 Break into phases
 4. ✅ Test per-tool (not per-phase)
 5. 📊 Update GitHub regularly
-6. 💬 Ask questions when unclear
+6. 🤔 **Answer your own questions** (document decisions)
 7. 📚 Document as you go
 8. ✨ Commit working code
 9. 🎯 Verify before closing
 
-**Follow this workflow exactly for autonomous issue resolution.**
+**Decision-Making Framework**:
+- ✅ **DO**: Make all technical and design decisions autonomously
+- ✅ **DO**: Document decisions with rationale in DECISIONS.md
+- ✅ **DO**: Follow design principles and past lessons
+- ✅ **DO**: Move forward with confidence
+- ❌ **DON'T**: Ask user for technical guidance
+- ❌ **DON'T**: Ask user about design patterns
+- ❌ **DON'T**: Wait for approval on implementation details
+
+**Only involve user for**:
+- Major product direction changes
+- Business decisions outside technical scope
+- Deployment/infrastructure decisions
+
+**Follow this workflow exactly for fully autonomous issue resolution.**

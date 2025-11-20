@@ -190,7 +190,8 @@ const DriveCreateFileSchema = z.object({
 const DriveGetFileSchema = z.object({
   fileId: z.string().min(1, "File ID is required"),
   fields: z.string().optional(),
-  supportsAllDrives: z.boolean().optional()
+  supportsAllDrives: z.boolean().optional(),
+  includeTrashed: z.boolean().optional()
 });
 
 // Maps to files.update in Google Drive API v3
@@ -221,7 +222,8 @@ const DriveListFilesSchema = z.object({
   spaces: z.string().optional(),
   corpora: z.string().optional(),
   includeItemsFromAllDrives: z.boolean().optional(),
-  supportsAllDrives: z.boolean().optional()
+  supportsAllDrives: z.boolean().optional(),
+  includeTrashed: z.boolean().optional()
 });
 
 // Phase 2: File Utilities - 1:1 Mappings
@@ -2047,7 +2049,8 @@ const TOOLS_LIST = [
           properties: {
             fileId: { type: "string", description: "File ID" },
             fields: { type: "string", description: "Fields to include in response (e.g., 'id,name,mimeType,parents')", optional: true },
-            supportsAllDrives: { type: "boolean", description: "Whether to support shared drives (defaults to true)", optional: true }
+            supportsAllDrives: { type: "boolean", description: "Whether to support shared drives (defaults to true)", optional: true },
+            includeTrashed: { type: "boolean", description: "Whether to return files in trash (defaults to false - trashed files will error)", optional: true }
           },
           required: ["fileId"]
         }
@@ -2096,7 +2099,8 @@ const TOOLS_LIST = [
             spaces: { type: "string", description: "Spaces to search (drive, appDataFolder, photos)", optional: true },
             corpora: { type: "string", description: "Bodies to search (user, domain, drive, allDrives)", optional: true },
             includeItemsFromAllDrives: { type: "boolean", description: "Include items from all drives (defaults to true)", optional: true },
-            supportsAllDrives: { type: "boolean", description: "Whether to support shared drives (defaults to true)", optional: true }
+            supportsAllDrives: { type: "boolean", description: "Whether to support shared drives (defaults to true)", optional: true },
+            includeTrashed: { type: "boolean", description: "Whether to include trashed files (defaults to false)", optional: true }
           },
           required: []
         }
@@ -4818,11 +4822,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           supportsAllDrives: args.supportsAllDrives !== undefined ? args.supportsAllDrives : true
         };
 
+        // Ensure we get the trashed field in the response to check it
         if (args.fields) {
-          params.fields = args.fields;
+          // If user specifies fields, ensure 'trashed' is included
+          const fieldsArray = args.fields.split(',').map(f => f.trim());
+          if (!fieldsArray.includes('trashed')) {
+            fieldsArray.push('trashed');
+          }
+          params.fields = fieldsArray.join(',');
+        } else {
+          // If no fields specified, request trashed explicitly
+          params.fields = '*';
         }
 
         const result = await drive.files.get(params);
+
+        // Check if file is trashed and includeTrashed is not explicitly set to true
+        const includeTrashed = args.includeTrashed !== undefined ? args.includeTrashed : false;
+        if (result.data.trashed && !includeTrashed) {
+          return errorResponse(`File ${args.fileId} is in trash. Set includeTrashed=true to retrieve trashed files.`);
+        }
 
         return {
           content: [{
@@ -4911,9 +4930,27 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         const params: any = {};
 
-        if (args.q) {
-          params.q = args.q;
+        // Handle query parameter with automatic trash filtering
+        let query = args.q || '';
+
+        // Check if query already contains "trashed" filter
+        const hasTrashedFilter = /trashed\s*=/.test(query);
+
+        if (!hasTrashedFilter) {
+          // Default to excluding trashed files unless explicitly requested
+          const includeTrashed = args.includeTrashed !== undefined ? args.includeTrashed : false;
+          const trashedFilter = includeTrashed ? 'trashed = true' : 'trashed = false';
+
+          // Append trash filter to query
+          if (query.length > 0) {
+            query = `(${query}) and ${trashedFilter}`;
+          } else {
+            query = trashedFilter;
+          }
         }
+
+        params.q = query;
+
         if (args.pageSize) {
           params.pageSize = args.pageSize;
         }

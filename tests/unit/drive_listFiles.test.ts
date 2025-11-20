@@ -8,7 +8,10 @@ const DriveListFilesSchema = z.object({
   orderBy: z.string().optional(),
   fields: z.string().optional(),
   spaces: z.string().optional(),
-  corpora: z.string().optional()
+  corpora: z.string().optional(),
+  includeItemsFromAllDrives: z.boolean().optional(),
+  supportsAllDrives: z.boolean().optional(),
+  includeTrashed: z.boolean().optional()
 });
 
 describe('drive_listFiles - Unit Tests', () => {
@@ -51,6 +54,27 @@ describe('drive_listFiles - Unit Tests', () => {
 
   it('should accept pageSize of 1000', () => {
     const result = DriveListFilesSchema.safeParse({ pageSize: 1000 });
+    expect(result.success).toBe(true);
+  });
+
+  it('should validate with includeTrashed parameter', () => {
+    const result = DriveListFilesSchema.safeParse({
+      includeTrashed: true
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should validate with includeItemsFromAllDrives parameter', () => {
+    const result = DriveListFilesSchema.safeParse({
+      includeItemsFromAllDrives: true
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should validate with supportsAllDrives parameter', () => {
+    const result = DriveListFilesSchema.safeParse({
+      supportsAllDrives: true
+    });
     expect(result.success).toBe(true);
   });
 });

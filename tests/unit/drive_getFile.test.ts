@@ -4,7 +4,8 @@ import { z } from 'zod';
 const DriveGetFileSchema = z.object({
   fileId: z.string().min(1, "File ID is required"),
   fields: z.string().optional(),
-  supportsAllDrives: z.boolean().optional()
+  supportsAllDrives: z.boolean().optional(),
+  includeTrashed: z.boolean().optional()
 });
 
 describe('drive_getFile - Unit Tests', () => {
@@ -40,5 +41,13 @@ describe('drive_getFile - Unit Tests', () => {
     if (!result.success) {
       expect(result.error.errors[0].message).toBe('File ID is required');
     }
+  });
+
+  it('should validate with includeTrashed parameter', () => {
+    const result = DriveGetFileSchema.safeParse({
+      fileId: 'abc123',
+      includeTrashed: true
+    });
+    expect(result.success).toBe(true);
   });
 });

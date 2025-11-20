@@ -7,9 +7,9 @@ This is a fork of [@piotr-agier/google-drive-mcp](https://github.com/piotr-agier
 ## ⚠️ CRITICAL: READ BEFORE ANY IMPLEMENTATION
 
 **MANDATORY Reading Order for ALL New Work**:
-1. **design/DESIGN_PRINCIPLES.md** - MUST read first, especially the warning at the top
-2. **design/LESSONS_LEARNED.md** - Learn from past mistakes (DO NOT SKIP!)
-3. **design/api_reference_sheets.md** OR **design/api_reference_docs.md** - API reference
+1. **docs/development/design/DESIGN_PRINCIPLES.md** - MUST read first, especially the warning at the top
+2. **docs/development/design/LESSONS_LEARNED.md** - Learn from past mistakes (DO NOT SKIP!)
+3. **docs/development/design/api_reference_sheets.md** OR **docs/development/design/api_reference_docs.md** - API reference
 4. **Current phase plan** - Step-by-step implementation guide
 
 **Key Rule**: TESTS ARE PART OF IMPLEMENTATION
@@ -24,17 +24,16 @@ This is a fork of [@piotr-agier/google-drive-mcp](https://github.com/piotr-agier
 ## Important Context Documents
 
 ### Core Design Documents (READ THESE FIRST)
-1. **design/DESIGN_PRINCIPLES.md** - Master reference for all implementation decisions
-2. **design/LESSONS_LEARNED.md** - Documented mistakes and how to avoid them
-3. **design/API_MAPPING_STRATEGY.md** - How to map APIs to MCP tools
+1. **docs/development/design/DESIGN_PRINCIPLES.md** - Master reference for all implementation decisions
+2. **docs/development/design/LESSONS_LEARNED.md** - Documented mistakes and how to avoid them
+3. **docs/development/design/API_MAPPING_STRATEGY.md** - How to map APIs to MCP tools
 
 ### API References
-1. **design/api_reference_sheets.md** - Complete Google Sheets API audit (50+ operations)
-2. **design/api_reference_docs.md** - Complete Google Docs API audit (34 operations, 100% implemented)
+1. **docs/development/design/api_reference_sheets.md** - Complete Google Sheets API audit (50+ operations)
+2. **docs/development/design/api_reference_docs.md** - Complete Google Docs API audit (34 operations, 100% implemented)
 
 ### Implementation Plans
-1. **design/SHEETS_PHASE_1_COMPLETE.md** - Phase 1 summary (10 core data tools implemented)
-2. **EXTENSION_PLAN.md** - Drive API comments implementation plan
+1. **docs/development/design/SHEETS_PHASE_1_COMPLETE.md** - Phase 1 summary (10 core data tools implemented)
 
 ### Other Documentation
 1. **README.md** - Original project documentation (will be updated as we add features)
@@ -131,14 +130,14 @@ NEVER batch implement multiple tools before writing tests!
 
 ### 🔄 Next Implementation
 **Google Sheets API - Phase 2: Row/Column/Range Operations** (10 tools planned)
-- See `design/api_reference_sheets.md` for complete plan
+- See `docs/development/design/api_reference_sheets.md` for complete plan
 
 ### 📋 Planned (Future)
 **Google Drive Comments API** (3 tools)
 - `listComments` - List comments on a file
 - `replyToComment` - Reply to a specific comment
 - `resolveComment` - Mark comment as resolved
-- See **EXTENSION_PLAN.md** for complete implementation details
+- Implementation details in docs/historical/
 
 ## Todo List Guidelines
 
@@ -181,8 +180,8 @@ NEVER batch implement multiple tools before writing tests!
 ## Quick Reminder Checklist
 
 Before starting any new tool:
-- [ ] Read design/DESIGN_PRINCIPLES.md
-- [ ] Read design/LESSONS_LEARNED.md
+- [ ] Read docs/development/design/DESIGN_PRINCIPLES.md
+- [ ] Read docs/development/design/LESSONS_LEARNED.md
 - [ ] Understand: Tests are PART of implementation
 - [ ] Structure todos as "Implement X (code + tests)"
 - [ ] Run `npm test` after EACH tool, not at end

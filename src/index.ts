@@ -583,7 +583,9 @@ const DriveCopyFileSchema = z.object({
 const DriveExportFileSchema = z.object({
   fileId: z.string().min(1, "File ID is required"),
   mimeType: z.string().min(1, "Export MIME type is required"),
-  supportsAllDrives: z.boolean().optional()
+  supportsAllDrives: z.boolean().optional(),
+  returnMode: z.enum(["summary", "full"]).default("summary")
+    .describe("'summary' (default): Returns metadata + resource URI, caches content. 'full': Returns complete response with truncation")
 });
 
 // Phase 3: Comments & Collaboration - 1:1 Mappings
@@ -823,7 +825,9 @@ const SheetsAddConditionalFormatRuleSchema = z.object({
 const SheetsGetSpreadsheetSchema = z.object({
   spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
   ranges: z.array(z.string()).optional(),
-  includeGridData: z.boolean().optional()
+  includeGridData: z.boolean().optional(),
+  returnMode: z.enum(["summary", "full"]).default("summary")
+    .describe("'summary' (default): Returns metadata + resource URI, caches content. 'full': Returns complete response with truncation")
 });
 
 const SheetsCreateSpreadsheetSchema = z.object({
@@ -850,7 +854,9 @@ const SheetsBatchGetValuesSchema = z.object({
   spreadsheetId: z.string().min(1, "Spreadsheet ID is required"),
   ranges: z.array(z.string()).min(1, "At least one range is required"),
   majorDimension: z.enum(["ROWS", "COLUMNS"]).optional(),
-  valueRenderOption: z.enum(["FORMATTED_VALUE", "UNFORMATTED_VALUE", "FORMULA"]).optional()
+  valueRenderOption: z.enum(["FORMATTED_VALUE", "UNFORMATTED_VALUE", "FORMULA"]).optional(),
+  returnMode: z.enum(["summary", "full"]).default("summary")
+    .describe("'summary' (default): Returns metadata + resource URI, caches content. 'full': Returns complete response with truncation")
 });
 
 const SheetsBatchUpdateValuesSchema = z.object({
@@ -2107,7 +2113,9 @@ const DocsDeletePositionedObjectSchema = z.object({
 
 const DocsGetSchema = z.object({
   documentId: z.string().min(1, "Document ID is required"),
-  includeTabsContent: z.boolean().optional()
+  includeTabsContent: z.boolean().optional(),
+  returnMode: z.enum(["summary", "full"]).default("summary")
+    .describe("'summary' (default): Returns metadata + resource URI, caches content. 'full': Returns complete response with truncation")
 });
 
 const DocsInsertSectionBreakSchema = z.object({

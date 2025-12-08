@@ -5493,17 +5493,63 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           responseType: 'arraybuffer'
         });
 
-        // Return base64 encoded data for binary formats
-        const base64Data = Buffer.from(result.data as ArrayBuffer).toString('base64');
+        const buffer = Buffer.from(result.data as ArrayBuffer);
+        const isTextFormat = args.mimeType.startsWith('text/') || args.mimeType === 'application/json';
+        const contentText = isTextFormat ? buffer.toString('utf-8') : '';
+
+        // Handle returnMode (Issue #26)
+        if (args.returnMode === 'summary') {
+          // Get file metadata for summary
+          const fileInfo = await drive.files.get({
+            fileId: args.fileId,
+            fields: 'name,mimeType',
+            supportsAllDrives: true
+          });
+
+          // Cache the content for later Resource access
+          if (isTextFormat) {
+            cacheStore(args.fileId, { mimeType: args.mimeType }, contentText, 'file');
+          }
+
+          const summary = {
+            fileName: fileInfo.data.name || 'unknown',
+            fileId: args.fileId,
+            exportMimeType: args.mimeType,
+            characterCount: isTextFormat ? contentText.length : buffer.length,
+            isTextFormat,
+            resourceUri: isTextFormat
+              ? `gdrive://files/${args.fileId}/content/{start}-{end}`
+              : null,
+            hint: isTextFormat
+              ? `Use resources/read with content URI to access data. Example: gdrive://files/${args.fileId}/content/0-5000`
+              : 'Binary format - use returnMode: "full" to get base64-encoded content'
+          };
+
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify(summary, null, 2)
+            }],
+            isError: false
+          };
+        }
+
+        // returnMode: 'full' - return complete response with truncation
+        const base64Data = buffer.toString('base64');
+        const fullResponse = JSON.stringify({
+          mimeType: args.mimeType,
+          data: base64Data,
+          encoding: 'base64'
+        }, null, 2);
+
+        const truncated = truncateResponse(fullResponse, {
+          hint: `Use returnMode: 'summary' to get metadata and cache content for chunk access via gdrive://files/${args.fileId}/content/{start}-{end}`
+        });
 
         return {
           content: [{
             type: "text",
-            text: JSON.stringify({
-              mimeType: args.mimeType,
-              data: base64Data,
-              encoding: 'base64'
-            }, null, 2)
+            text: truncated.text
           }],
           isError: false
         };
@@ -6434,8 +6480,45 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             includeGridData: args.includeGridData
           });
 
+          const fullJson = JSON.stringify(response.data, null, 2);
+
+          // Handle returnMode (Issue #26)
+          if (args.returnMode === 'summary') {
+            // Cache the content for later Resource access
+            cacheStore(args.spreadsheetId, response.data, fullJson, 'sheet');
+
+            // Extract sheet names
+            const sheetNames = (response.data.sheets || []).map(
+              (sheet: any) => sheet.properties?.title || 'Untitled'
+            );
+
+            const summary = {
+              title: response.data.properties?.title || 'Untitled',
+              spreadsheetId: args.spreadsheetId,
+              sheetCount: sheetNames.length,
+              sheetNames,
+              locale: response.data.properties?.locale,
+              timeZone: response.data.properties?.timeZone,
+              resourceUri: `gdrive://sheets/${args.spreadsheetId}/values/{range}`,
+              hint: `Use sheets_batchGetValues to fetch specific ranges, or resources/read with values URI. Example: gdrive://sheets/${args.spreadsheetId}/values/Sheet1!A1:B10`
+            };
+
+            return {
+              content: [{
+                type: "text",
+                text: JSON.stringify(summary, null, 2)
+              }],
+              isError: false
+            };
+          }
+
+          // returnMode: 'full' - return complete response with truncation
+          const truncated = truncateResponse(fullJson, {
+            hint: `Use returnMode: 'summary' to get metadata, or sheets_batchGetValues for specific ranges`
+          });
+
           return {
-            content: [{ type: "text", text: JSON.stringify(response.data, null, 2) }],
+            content: [{ type: "text", text: truncated.text }],
             isError: false
           };
         } catch (error: any) {
@@ -6547,8 +6630,54 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             valueRenderOption: args.valueRenderOption
           });
 
+          const fullJson = JSON.stringify(response.data, null, 2);
+
+          // Handle returnMode (Issue #26)
+          if (args.returnMode === 'summary') {
+            // Cache the content for later Resource access
+            const cacheKey = `${args.spreadsheetId}:values:${args.ranges.join(',')}`;
+            cacheStore(cacheKey, response.data, fullJson, 'sheet');
+
+            // Calculate stats
+            let totalCells = 0;
+            const rangeStats = (response.data.valueRanges || []).map((vr: any) => {
+              const rows = vr.values?.length || 0;
+              const cols = rows > 0 ? (vr.values[0]?.length || 0) : 0;
+              const cells = rows * cols;
+              totalCells += cells;
+              return {
+                range: vr.range,
+                rows,
+                columns: cols,
+                cells
+              };
+            });
+
+            const summary = {
+              spreadsheetId: args.spreadsheetId,
+              rangeCount: rangeStats.length,
+              totalCells,
+              ranges: rangeStats,
+              resourceUri: `gdrive://sheets/${args.spreadsheetId}/values/{range}`,
+              hint: `Data cached. Use narrower ranges for specific data, or resources/read with values URI.`
+            };
+
+            return {
+              content: [{
+                type: "text",
+                text: JSON.stringify(summary, null, 2)
+              }],
+              isError: false
+            };
+          }
+
+          // returnMode: 'full' - return complete response with truncation
+          const truncated = truncateResponse(fullJson, {
+            hint: `Use returnMode: 'summary' to get metadata, or request narrower ranges`
+          });
+
           return {
-            content: [{ type: "text", text: JSON.stringify(response.data, null, 2) }],
+            content: [{ type: "text", text: truncated.text }],
             isError: false
           };
         } catch (error: any) {
@@ -8859,10 +8988,71 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             ...(args.includeTabsContent !== undefined && { includeTabsContent: args.includeTabsContent })
           });
 
+          // Extract text content from document body
+          const extractText = (content: any[]): string => {
+            let text = '';
+            for (const element of content || []) {
+              if (element.paragraph?.elements) {
+                for (const el of element.paragraph.elements) {
+                  if (el.textRun?.content) {
+                    text += el.textRun.content;
+                  }
+                }
+              } else if (element.table) {
+                // Extract text from table cells
+                for (const row of element.table.tableRows || []) {
+                  for (const cell of row.tableCells || []) {
+                    text += extractText(cell.content);
+                  }
+                }
+              }
+            }
+            return text;
+          };
+
+          const docText = extractText(document.data.body?.content || []);
+          const fullJson = JSON.stringify(document.data, null, 2);
+
+          // Handle returnMode (Issue #26)
+          if (args.returnMode === 'summary') {
+            // Cache the content for later Resource access
+            cacheStore(args.documentId, document.data, docText, 'doc');
+
+            // Count sections (headings)
+            let sectionCount = 0;
+            for (const element of document.data.body?.content || []) {
+              if (element.paragraph?.paragraphStyle?.namedStyleType?.startsWith('HEADING')) {
+                sectionCount++;
+              }
+            }
+
+            const summary = {
+              title: document.data.title || 'Untitled',
+              documentId: args.documentId,
+              characterCount: docText.length,
+              sectionCount,
+              resourceUri: `gdrive://docs/${args.documentId}/chunk/{start}-{end}`,
+              hint: 'Use resources/read with chunk URI to access content. Example: gdrive://docs/' + args.documentId + '/chunk/0-5000'
+            };
+
+            return {
+              content: [{
+                type: "text",
+                text: JSON.stringify(summary, null, 2)
+              }],
+              isError: false
+            };
+          }
+
+          // returnMode: 'full' - return complete response with truncation
+          const truncated = truncateResponse(fullJson, {
+            hint: `Use returnMode: 'summary' to get metadata and cache content for chunk access via gdrive://docs/${args.documentId}/chunk/{start}-{end}`
+          });
+
           return {
             content: [{
               type: "text",
-              text: JSON.stringify(document.data, null, 2)
+              text: truncated.text
             }],
             isError: false
           };

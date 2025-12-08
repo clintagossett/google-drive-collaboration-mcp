@@ -228,6 +228,37 @@ Each task folder may contain:
 
 **Note**: Task folders persist as project documentation - don't delete after completion.
 
+### Epics and Sub-Issues
+
+**Structure**: Keep tasks **flat** with metadata linking (optimized for Claude Code).
+
+```
+tasks/
+├── 00022-mcp-best-practices-epic/    # Epic (overview + links)
+├── 00023-cache-infrastructure/       # Sub-issue of #22
+├── 00024-returnmode-parameter/       # Sub-issue of #22
+└── 00025-truncation-helper/          # Sub-issue of #22
+```
+
+**Why flat?**
+- Simple lookup: Issue #23 → `tasks/00023-*/README.md`
+- Self-contained: Each task has full context
+- GitHub handles epic/sub-issue relationships natively
+- Easy navigation: `ls tasks/` shows all work
+
+**Epic README**: Contains overview and links to child issues (no implementation work).
+
+**Sub-issue README metadata**:
+```markdown
+**GitHub Issue:** #23
+**Epic:** #22 (Epic Title)
+**Phase:** 1 - Phase Name
+**Blocked By:** None
+**Blocks:** #24, #25
+```
+
+**Subtasks within a task folder** (e.g., `01_subtask_name/`) are for internal breakdown only - they are NOT separate GitHub issues.
+
 ## Quick Reminder Checklist
 
 Before starting any new tool:
@@ -243,3 +274,4 @@ Before reporting a bug or requesting a feature:
 - [ ] Do NOT share production documents or sensitive data
 - [ ] Provide clear reproduction steps (for bugs)
 - [ ] Explain the use case (for features)
+- Always answer questions, evaluate options, and propose solution using the MPC Builder skill

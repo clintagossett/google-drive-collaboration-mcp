@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Google Drive Collaboration MCP Server Evaluation
+
+  These questions test whether LLMs can effectively use the MCP server
+  to answer realistic, complex questions about Google Workspace content.
+
+  IMPORTANT: Answers must be verified by actually running the evaluation.
+  Replace placeholder answers with actual values from test documents.
+-->
+<evaluation>
+  <!-- Q1: Multi-hop Drive exploration -->
+  <qa_pair>
+    <question>Using the Google Drive MCP tools, find all files in folder ID '1hPToIm_EVEbJIVufHgz3aC_8cL4aeMBq'. What is the MIME type of the oldest file in that folder based on creation date? Answer with the full MIME type string.</question>
+    <answer>VERIFY_REQUIRED</answer>
+  </qa_pair>
+
+  <!-- Q2: Document metadata analysis -->
+  <qa_pair>
+    <question>Get the metadata for document '1CIeAIWDqN_s1g9b7V2h79VpFjlrPM15VYuZ09zsNM9w'. How many total revisions does this document have? Answer with just the number.</question>
+    <answer>VERIFY_REQUIRED</answer>
+  </qa_pair>
+
+  <!-- Q3: Spreadsheet structure analysis -->
+  <qa_pair>
+    <question>If there is a spreadsheet in folder '1hPToIm_EVEbJIVufHgz3aC_8cL4aeMBq', get its metadata using sheets_getSpreadsheet. How many sheets (tabs) does it contain? Answer with just the number, or 'NO_SPREADSHEET' if none exists.</question>
+    <answer>VERIFY_REQUIRED</answer>
+  </qa_pair>
+
+  <!-- Q4: Document content extraction -->
+  <qa_pair>
+    <question>Get the content of document '1CIeAIWDqN_s1g9b7V2h79VpFjlrPM15VYuZ09zsNM9w' using docs_getDocument. What is the document's title as returned by the API?</question>
+    <answer>VERIFY_REQUIRED</answer>
+  </qa_pair>
+
+  <!-- Q5: Cross-API correlation -->
+  <qa_pair>
+    <question>List all Google Docs files in folder '1hPToIm_EVEbJIVufHgz3aC_8cL4aeMBq' using drive_listFiles with appropriate MIME type filter. How many Google Docs are in that folder? Answer with just the number.</question>
+    <answer>VERIFY_REQUIRED</answer>
+  </qa_pair>
+
+  <!-- Q6: File search with query -->
+  <qa_pair>
+    <question>Using drive_listFiles, search for all files where the name contains 'test' (case insensitive) across your accessible Drive. What is the name of the first result when sorted by modifiedTime descending?</question>
+    <answer>VERIFY_REQUIRED</answer>
+  </qa_pair>
+
+  <!-- Q7: Spreadsheet data extraction -->
+  <qa_pair>
+    <question>If a spreadsheet exists in the test folder, use sheets_batchGetValues to get the value in cell A1 of the first sheet. What is that value? Answer with the exact cell content, or 'NO_DATA' if empty.</question>
+    <answer>VERIFY_REQUIRED</answer>
+  </qa_pair>
+
+  <!-- Q8: Document structure analysis -->
+  <qa_pair>
+    <question>Get document '1CIeAIWDqN_s1g9b7V2h79VpFjlrPM15VYuZ09zsNM9w' and examine its body content. Does the document contain any tables? Answer 'Yes' or 'No'.</question>
+    <answer>VERIFY_REQUIRED</answer>
+  </qa_pair>
+
+  <!-- Q9: Folder hierarchy exploration -->
+  <qa_pair>
+    <question>Get the metadata for folder '1hPToIm_EVEbJIVufHgz3aC_8cL4aeMBq' using drive_getFile. What is the exact folder name?</question>
+    <answer>VERIFY_REQUIRED</answer>
+  </qa_pair>
+
+  <!-- Q10: Multi-step permission check -->
+  <qa_pair>
+    <question>For document '1CIeAIWDqN_s1g9b7V2h79VpFjlrPM15VYuZ09zsNM9w', can the current user edit it? Use the capabilities field from drive_getFile to determine. Answer 'Yes' or 'No'.</question>
+    <answer>VERIFY_REQUIRED</answer>
+  </qa_pair>
+</evaluation>

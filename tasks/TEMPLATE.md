@@ -3,6 +3,12 @@
 **GitHub Issue:** #X
 **Related Project:** _(optional - link to `projects/YYYY-MM-project-name/` if applicable)_
 
+<!-- For sub-issues of an Epic, add these fields: -->
+**Epic:** _(optional - #XX Epic Title, if this is a sub-issue)_
+**Phase:** _(optional - Phase number and name within the Epic)_
+**Blocked By:** _(optional - #XX, #YY - issues that must complete first)_
+**Blocks:** _(optional - #XX, #YY - issues waiting on this one)_
+
 ---
 
 ## Resume (Start Here)

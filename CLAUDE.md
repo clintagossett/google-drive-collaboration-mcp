@@ -177,6 +177,57 @@ NEVER batch implement multiple tools before writing tests!
 ### 📝 Historical Issues
 - **Reference**: `docs/development/known_issues.md` (now contains resolved issues only)
 
+## Task Workflow
+
+All work is tracked through numbered task folders tied to GitHub issues:
+
+```
+tasks/
+├── 00001-first-task/        # GitHub Issue #1
+├── 00002-another-task/      # GitHub Issue #2
+└── XXXXX-task-name/         # Future tasks
+```
+
+### Creating a New Task
+
+1. **Create GitHub Issue:**
+   ```bash
+   gh issue create --title "Task title" --body "Description"
+   ```
+
+2. **Create Task Folder:**
+   ```bash
+   mkdir tasks/XXXXX-task-name/
+   ```
+   - Use 5-digit numbering (00001, 00002, etc.)
+   - Match the GitHub issue number when possible
+
+3. **Add README.md** to document the task (see `tasks/TEMPLATE.md`)
+
+4. **Do the work**
+
+5. **Commit with Issue Reference:**
+   ```
+   Closes #X
+   ```
+
+### Task Folder Contents
+
+Each task folder may contain:
+- `README.md` - Task description, decisions, outcomes
+- `output/` - Generated artifacts (code, data, docs)
+- Any other relevant files
+
+### Task Conventions
+
+| Convention | Format | Example |
+|------------|--------|---------|
+| Task number | 5-digit, zero-padded | `00001`, `00042`, `00123` |
+| Folder name | `XXXXX-kebab-case-description` | `00042-add-user-auth` |
+| Issue linking | `Closes #X` in commit | `Closes #42` |
+
+**Note**: Task folders persist as project documentation - don't delete after completion.
+
 ## Quick Reminder Checklist
 
 Before starting any new tool:
